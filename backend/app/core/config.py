@@ -28,6 +28,16 @@ def _resolve_database_url() -> str:
     # Supabase & cloud providers often provide 'postgres://'; SQLAlchemy requires 'postgresql://'
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+
+    # Render and many cloud hosts do not have outbound IPv6.
+    # Supabase direct host (db.<ref>.supabase.co:5432) resolves only to an IPv6 address,
+    # causing psycopg2 to fail with: "port 5432 failed: Network is unreachable".
+    # We automatically rewrite known Supabase direct hosts to the IPv4-compatible pooler:
+    if "db.vxmzsltsdjysgfzshyrr.supabase.co" in url:
+        url = url.replace("db.vxmzsltsdjysgfzshyrr.supabase.co:5432", "aws-0-ap-south-1.pooler.supabase.com:5432")
+        url = url.replace("db.vxmzsltsdjysgfzshyrr.supabase.co", "aws-0-ap-south-1.pooler.supabase.com:5432")
+        if "://postgres:" in url:
+            url = url.replace("://postgres:", "://postgres.vxmzsltsdjysgfzshyrr:")
     
     # Auto-adapt driver prefix if user provides standard postgresql://
     if url.startswith("postgresql://") and not (url.startswith("postgresql+psycopg2://") or url.startswith("postgresql+psycopg://")):
