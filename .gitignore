@@ -1,0 +1,97 @@
+# ==============================================================================
+# JOCKY - Digital Forensics Framework (.gitignore)
+# ==============================================================================
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+venv1
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Unit Test, Pytest & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Node.js & React Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+.vite/
+
+# Local SQLite Databases
+*.db
+*.sqlite
+*.sqlite3
+backend/jocky.db
+backend/*.db
+
+# Forensic Evidence Storage (Generated case artifacts)
+evidence/INV-*/
+evidence/INV-*
+!evidence/.gitkeep
+
+# Environment & Secret Variables
+.env
+.env.local
+.env.*.local
+backend/.env
+**/.env
+**/.env.*
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs & Temporary Files
+*.log
+logs/
+scratch/
+
+# Local Documentation Files
+SIH_PROJECT_COMPLETE_DOCUMENTATION.md

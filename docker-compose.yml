@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jocky-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - DEMO_MODE=false
+      - MAX_ROUNDS=3
+      # Optional: To use Supabase or external PostgreSQL, set DATABASE_URL here
+      # - DATABASE_URL=postgresql://user:password@host:5432/dbname
+    volumes:
+      - jocky_evidence:/app/evidence
+      - jocky_db:/app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jocky-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  jocky_evidence:
+  jocky_db:

@@ -1,0 +1,9 @@
+{
+  "include": [
+    "backend"
+  ],
+  "extraPaths": [
+    "backend"
+  ],
+  "pythonPath": "C:\\Users\\ANNAPOORANI\\AppData\\Local\\Programs\\Python\\Python310\\python.exe"
+}
