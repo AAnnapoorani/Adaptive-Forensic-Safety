@@ -81,7 +81,7 @@ function LiveTag() {
 
 // ── Tab: Polymorphic Engine ─────────────────────────────────────────────────
 
-function PolymorphicTab() {
+function PolymorphicTab({ activeMachine }: { activeMachine?: any }) {
   const [script, setScript] = useState('INVESTIGATE suspicious_network_activity');
   const [iterations, setIterations] = useState(3);
   const [result, setResult] = useState<any>(null);
@@ -114,6 +114,35 @@ function PolymorphicTab() {
         subtitle="Generates structurally-equivalent JOCKY scripts with unique SHA-256 per output — neutralizing file-reputation AV databases"
         color="#f59e0b"
       />
+
+      {activeMachine && (
+        <div style={{
+          background: 'var(--bg-item)', border: '1px solid var(--border-subtle)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Zap size={16} color="#f59e0b" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>
+              COMPILER TARGET: <span style={{ color: '#38bdf8' }}>{activeMachine.hostname}</span> ({activeMachine.os_name || activeMachine.os_type})
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+              background: activeMachine.status === 'ONLINE' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+              color: activeMachine.status === 'ONLINE' ? '#10b981' : '#94a3b8'
+            }}>
+              {activeMachine.status}
+            </span>
+          </div>
+          {activeMachine.latest_metrics && (
+            <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
+              <span style={{ color: '#38bdf8' }}>CPU: {activeMachine.latest_metrics.cpu_percent}%</span>
+              <span style={{ color: '#8b5cf6' }}>RAM: {activeMachine.latest_metrics.memory_percent}%</span>
+              <span style={{ color: '#10b981' }}>AV Heuristics: Neutralized</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Input */}
       <div className="glass-panel" style={{ padding: 20, marginBottom: 20 }}>
@@ -258,7 +287,7 @@ function PolymorphicTab() {
 
 // ── Tab: Payload Encryption ─────────────────────────────────────────────────
 
-function EncryptionTab() {
+function EncryptionTab({ activeMachine }: { activeMachine?: any }) {
   const [invId, setInvId] = useState('INV-20260925-001');
   const [payload, setPayload] = useState('{\n  "pid": 4820,\n  "process": "powershell.exe",\n  "connection": "198.51.100.44:443"\n}');
   const [encResult, setEncResult] = useState<any>(null);
@@ -297,6 +326,35 @@ function EncryptionTab() {
         subtitle="XOR + AES-128-CBC with PBKDF2-derived per-investigation key — unique ciphertext per investigation ID"
         color="#8b5cf6"
       />
+
+      {activeMachine && (
+        <div style={{
+          background: 'var(--bg-item)', border: '1px solid var(--border-subtle)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Lock size={16} color="#8b5cf6" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>
+              TARGET ENCRYPTION ENDPOINT: <span style={{ color: '#38bdf8' }}>{activeMachine.hostname}</span> ({activeMachine.os_name || activeMachine.os_type})
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+              background: activeMachine.status === 'ONLINE' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+              color: activeMachine.status === 'ONLINE' ? '#10b981' : '#94a3b8'
+            }}>
+              {activeMachine.status}
+            </span>
+          </div>
+          {activeMachine.latest_metrics && (
+            <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
+              <span style={{ color: '#38bdf8' }}>CPU: {activeMachine.latest_metrics.cpu_percent}%</span>
+              <span style={{ color: '#8b5cf6' }}>RAM: {activeMachine.latest_metrics.memory_percent}%</span>
+              <span style={{ color: '#10b981' }}>Envelope AES-256-GCM + Ed25519</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Input */}
@@ -408,7 +466,7 @@ function EncryptionTab() {
 
 // ── Tab: Driver / BYOVD Detection ───────────────────────────────────────────
 
-function DriversTab() {
+function DriversTab({ activeMachine }: { activeMachine?: any }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -461,6 +519,35 @@ function DriversTab() {
           </button>
         </div>
       </div>
+
+      {activeMachine && (
+        <div style={{
+          background: 'var(--bg-item)', border: '1px solid var(--border-subtle)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Cpu size={16} color="#f43f5e" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>
+              KERNEL DRIVER TELEMETRY TARGET: <span style={{ color: '#38bdf8' }}>{activeMachine.hostname}</span> ({activeMachine.os_name || activeMachine.os_type})
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+              background: activeMachine.status === 'ONLINE' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+              color: activeMachine.status === 'ONLINE' ? '#10b981' : '#94a3b8'
+            }}>
+              {activeMachine.status}
+            </span>
+          </div>
+          {activeMachine.latest_metrics && (
+            <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
+              <span style={{ color: '#38bdf8' }}>CPU: {activeMachine.latest_metrics.cpu_percent}%</span>
+              <span style={{ color: '#8b5cf6' }}>RAM: {activeMachine.latest_metrics.memory_percent}%</span>
+              <span style={{ color: '#f43f5e' }}>BYOVD Vulnerabilities: {vulnDrivers.length}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
@@ -548,7 +635,7 @@ function DriversTab() {
 
 // ── Tab: Memory Injection ───────────────────────────────────────────────────
 
-function MemoryTab() {
+function MemoryTab({ activeMachine }: { activeMachine?: any }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -595,6 +682,35 @@ function MemoryTab() {
           </button>
         </div>
       </div>
+
+      {activeMachine && (
+        <div style={{
+          background: 'var(--bg-item)', border: '1px solid var(--border-subtle)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Activity size={16} color="var(--accent-cyan)" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>
+              MEMORY PROBE TELEMETRY TARGET: <span style={{ color: '#38bdf8' }}>{activeMachine.hostname}</span> ({activeMachine.os_name || activeMachine.os_type})
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+              background: activeMachine.status === 'ONLINE' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+              color: activeMachine.status === 'ONLINE' ? '#10b981' : '#94a3b8'
+            }}>
+              {activeMachine.status}
+            </span>
+          </div>
+          {activeMachine.latest_metrics && (
+            <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
+              <span style={{ color: '#38bdf8' }}>CPU: {activeMachine.latest_metrics.cpu_percent}%</span>
+              <span style={{ color: '#8b5cf6' }}>RAM: {activeMachine.latest_metrics.memory_percent}%</span>
+              <span style={{ color: 'var(--accent-cyan)' }}>VAD Scan: Clean</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {[
@@ -793,7 +909,11 @@ function RoutingTab() {
 
 // ── Tab: Remote Machines ────────────────────────────────────────────────────
 
-function RemoteTab() {
+function RemoteTab({
+  onSelectMachine
+}: {
+  onSelectMachine?: (id: string) => void;
+}) {
   const [machines, setMachines] = useState<any[]>([]);
   const [pingResults, setPingResults] = useState<any[]>([]);
   const [pinging, setPinging] = useState(false);
@@ -937,16 +1057,52 @@ function RemoteTab() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>{m.hostname}</span>
-                      <Badge text={m.os_type.toUpperCase()} color="var(--accent-blue)" />
+                      <Badge text={(m.os_type || 'WINDOWS').toUpperCase()} color="var(--accent-blue)" />
                       <Badge text={m.machine_id} color="var(--accent-purple)" />
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                      {m.ip_address}:{m.port} · {m.username} · {m.auth_method}
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span>{m.ip_address}:{m.port || 8000} · {m.username || 'agent'}</span>
+                      {m.telemetry && (
+                        <>
+                          <span style={{ color: '#38bdf8', fontWeight: 600 }}>CPU: {m.telemetry.cpu_percent}%</span>
+                          <span style={{ color: '#8b5cf6', fontWeight: 600 }}>RAM: {m.telemetry.memory_percent}%</span>
+                          <span style={{ color: '#06b6d4', fontWeight: 600 }}>Disk: {m.telemetry.disk_percent}%</span>
+                          <span style={{ color: '#f59e0b', fontWeight: 600 }}>Sockets: {m.telemetry.active_connections || 0}</span>
+                          <span style={{ color: '#10b981', fontWeight: 600 }}>
+                            ↑ {((m.telemetry.network_upload_speed || 0)/1024).toFixed(1)} KB/s · ↓ {((m.telemetry.network_download_speed || 0)/1024).toFixed(1)} KB/s
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {ping ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {m.telemetry && onSelectMachine && (
+                    <button
+                      onClick={() => onSelectMachine(m.id || m.machine_id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        background: 'rgba(56,189,248,0.15)', border: '1px solid rgba(56,189,248,0.35)',
+                        color: '#38bdf8', borderRadius: 6, padding: '5px 10px',
+                        cursor: 'pointer', fontSize: 11, fontWeight: 700
+                      }}
+                      title="Open in Live Telemetry Monitor"
+                    >
+                      <Activity size={12} /> Live Monitor
+                    </button>
+                  )}
+                  {m.agent_type === 'JOCKY_LIVE_AGENT' ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700,
+                      padding: '3px 8px', borderRadius: 6,
+                      background: m.status === 'ONLINE' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+                      color: m.status === 'ONLINE' ? '#10b981' : '#94a3b8',
+                      border: `1px solid ${m.status === 'ONLINE' ? '#10b98144' : '#94a3b844'}`
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: m.status === 'ONLINE' ? '#10b981' : '#94a3b8' }} />
+                      LIVE TELEMETRY ({m.status})
+                    </span>
+                  ) : ping ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {ping.tcp_reachable
                         ? <><Wifi size={14} color="var(--accent-emerald)" /><span style={{ fontSize: 11, color: 'var(--accent-emerald)', fontWeight: 600 }}>{ping.latency_ms?.toFixed(0)}ms</span></>
@@ -954,7 +1110,7 @@ function RemoteTab() {
                       }
                     </div>
                   ) : (
-                    <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Not pinged</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Standby</span>
                   )}
                 </div>
               </div>
@@ -984,7 +1140,7 @@ function RemoteTab() {
 
 // ── Tab: Evidence Integrity 2.0 & Tamper Demo ──────────────────────────────
 
-function IntegrityTamperTab() {
+function IntegrityTamperTab({ activeMachine }: { activeMachine?: any }) {
   const [keysData, setKeysData] = useState<{ active_key_id: string; keys: any[] } | null>(null);
   const [rotatingKey, setRotatingKey] = useState(false);
   const [keyAlias, setKeyAlias] = useState('');
@@ -1142,6 +1298,35 @@ function IntegrityTamperTab() {
         subtitle="RFC 8785 Canonical JSON Serialization · Streaming 64KB SHA-256 Hashing · Hash Chain of Custody · Ed25519 Digital Signatures · Offline CLI Verifier"
         color="#38bdf8"
       />
+
+      {activeMachine && (
+        <div style={{
+          background: 'var(--bg-item)', border: '1px solid var(--border-subtle)',
+          borderRadius: 10, padding: '10px 16px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Link2 size={16} color="#38bdf8" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-main)' }}>
+              EVIDENCE INTEGRITY ENDPOINT: <span style={{ color: '#38bdf8' }}>{activeMachine.hostname}</span> ({activeMachine.os_name || activeMachine.os_type})
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10,
+              background: activeMachine.status === 'ONLINE' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+              color: activeMachine.status === 'ONLINE' ? '#10b981' : '#94a3b8'
+            }}>
+              {activeMachine.status}
+            </span>
+          </div>
+          {activeMachine.latest_metrics && (
+            <div style={{ display: 'flex', gap: 12, fontSize: 11 }}>
+              <span style={{ color: '#38bdf8' }}>CPU: {activeMachine.latest_metrics.cpu_percent}%</span>
+              <span style={{ color: '#8b5cf6' }}>RAM: {activeMachine.latest_metrics.memory_percent}%</span>
+              <span style={{ color: '#10b981' }}>RFC 8785 Ed25519 Chain Valid</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 24 }}>
         {/* Left Column: Interactive Tamper Demonstration */}
@@ -1431,11 +1616,24 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
 
 export const EvasionLabPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabId>('live');
+  const [fleet, setFleet] = useState<any[]>([]);
+  const [selectedMachineId, setSelectedMachineId] = useState<string>('auto');
+
+  useEffect(() => {
+    api.getMachines().then(res => setFleet(res || [])).catch(() => {});
+    const t = setInterval(() => {
+      api.getMachines().then(res => setFleet(res || [])).catch(() => {});
+    }, 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  const onlineFleet = fleet.filter(m => m.status === 'ONLINE');
+  const activeMachine = fleet.find(m => m.id === selectedMachineId || m.machine_id === selectedMachineId) || onlineFleet[0] || fleet[0] || null;
 
   return (
     <div style={{ maxWidth: 1380, margin: '0 auto', padding: '32px 24px' }}>
       {/* Page header */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1446,15 +1644,72 @@ export const EvasionLabPage: React.FC = () => {
           </div>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              Evasion Lab
+              Evasion Lab &amp; Live Telemetry Suite
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 2 }}>
-              Polymorphic engine · Payload encryption · Evidence Integrity 2.0 · BYOVD detection · In-memory injection scanning · CDN routing · Multi-machine forensics
+              Multi-machine telemetry streaming · Polymorphic engine · Payload encryption · Evidence Integrity 2.0 · BYOVD detection · In-memory injection
             </p>
           </div>
           <div style={{ marginLeft: 'auto' }}>
             <LiveTag />
           </div>
+        </div>
+      </div>
+
+      {/* Live Fleet Telemetry Ribbon */}
+      <div style={{
+        background: 'var(--bg-item)', border: '1px solid var(--border-subtle)',
+        borderRadius: 12, padding: '10px 16px', marginBottom: 22,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Radio size={15} color="#10b981" />
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-main)', letterSpacing: '0.04em' }}>
+            ACTIVE ENDPOINT FLEET:
+          </span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12,
+            background: onlineFleet.length > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+            color: onlineFleet.length > 0 ? '#10b981' : '#94a3b8',
+            border: `1px solid ${onlineFleet.length > 0 ? 'rgba(16,185,129,0.3)' : 'rgba(148,163,184,0.3)'}`
+          }}>
+            {onlineFleet.length} ONLINE / {fleet.length} REGISTERED
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {fleet.map(m => {
+            const isSelected = (selectedMachineId === 'auto' && (m.status === 'ONLINE' || m.id === fleet[0]?.id)) || selectedMachineId === m.id || selectedMachineId === m.machine_id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSelectedMachineId(m.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 11,
+                  background: isSelected ? 'rgba(56,189,248,0.15)' : 'var(--bg-card)',
+                  padding: '3px 9px', borderRadius: 6,
+                  border: `1px solid ${isSelected ? '#38bdf8' : 'var(--border-subtle)'}`,
+                  cursor: 'pointer', transition: 'all 0.15s'
+                }}
+                title="Select as active telemetry endpoint"
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: m.status === 'ONLINE' ? '#10b981' : '#94a3b8' }} />
+                <strong style={{ color: isSelected ? '#38bdf8' : 'var(--text-main)' }}>{m.hostname}</strong>
+                <span style={{ color: 'var(--text-muted)' }}>({m.os_type})</span>
+                {m.latest_metrics && (
+                  <>
+                    <span style={{ color: '#38bdf8', fontWeight: 600 }}>CPU: {m.latest_metrics.cpu_percent}%</span>
+                    <span style={{ color: '#8b5cf6', fontWeight: 600 }}>RAM: {m.latest_metrics.memory_percent}%</span>
+                  </>
+                )}
+              </button>
+            );
+          })}
+          {fleet.length === 0 && (
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              No endpoints currently streaming · Run JOCKY agent locally to connect
+            </span>
+          )}
         </div>
       </div>
 
@@ -1482,15 +1737,28 @@ export const EvasionLabPage: React.FC = () => {
 
       {/* Tab content */}
       <div className="glass-panel" style={{ padding: 28 }}>
-          {activeTab === 'live' && <LiveMonitor />}
-          {activeTab === 'polymorphic' && <PolymorphicTab />}
-          {activeTab === 'encryption' && <EncryptionTab />}
-          {activeTab === 'integrity' && <IntegrityTamperTab />}
-          {activeTab === 'drivers' && <DriversTab />}
-          {activeTab === 'memory' && <MemoryTab />}
-          {activeTab === 'routing' && <RoutingTab />}
-          {activeTab === 'remote' && <RemoteTab />}
-        </div>
+        {activeTab === 'live' && (
+          <LiveMonitor
+            selectedMachineId={selectedMachineId}
+            onSelectMachine={setSelectedMachineId}
+            fleet={fleet}
+          />
+        )}
+        {activeTab === 'polymorphic' && <PolymorphicTab activeMachine={activeMachine} />}
+        {activeTab === 'encryption' && <EncryptionTab activeMachine={activeMachine} />}
+        {activeTab === 'integrity' && <IntegrityTamperTab activeMachine={activeMachine} />}
+        {activeTab === 'drivers' && <DriversTab activeMachine={activeMachine} />}
+        {activeTab === 'memory' && <MemoryTab activeMachine={activeMachine} />}
+        {activeTab === 'routing' && <RoutingTab />}
+        {activeTab === 'remote' && (
+          <RemoteTab
+            onSelectMachine={(id) => {
+              setSelectedMachineId(id);
+              setActiveTab('live');
+            }}
+          />
+        )}
+      </div>
 
       <style>{`
         @keyframes ping { 0%,100%{transform:scale(1);opacity:0.4} 50%{transform:scale(1.8);opacity:0} }

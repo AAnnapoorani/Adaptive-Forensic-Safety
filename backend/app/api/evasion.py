@@ -27,7 +27,9 @@ JOCKY Extended REST API Endpoints — 100% Live Implementation
   POST /api/jocky/remote-machines/collect — Parallel multi-machine collection
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from app.core.database import get_db
 from pydantic import BaseModel
 from typing import Any
 
@@ -415,11 +417,38 @@ def update_routing_config(req: CDNRoutingRequest):
 # ─── Remote Machine Management Endpoints ─────────────────────────────────────
 
 @router.get("/remote-machines", summary="List all registered remote forensic target machines")
-def list_remote_machines():
-    """Returns all registered remote endpoints available for multi-machine collection."""
+def list_remote_machines(db: Session = Depends(get_db)):
+    """Returns all registered remote endpoints (both SSH and live telemetry agent endpoints) available for multi-machine collection."""
+    from app.models.machine import Machine
+    from app.models.telemetry import MachineTelemetry
+    db_machines = db.query(Machine).all()
+    results = list(_REMOTE_MACHINES.values())
+
+    for m in db_machines:
+        latest = db.query(MachineTelemetry).filter(MachineTelemetry.machine_id == m.id).order_by(MachineTelemetry.timestamp.desc()).first()
+        results.append({
+            "machine_id": m.machine_id or m.id,
+            "hostname": m.hostname,
+            "ip_address": m.ip_address or "127.0.0.1",
+            "os_type": m.os_type.lower() if m.os_type else "windows",
+            "status": m.status,
+            "agent_type": "JOCKY_LIVE_AGENT",
+            "agent_version": m.agent_version,
+            "last_seen": m.last_seen.isoformat() if m.last_seen else None,
+            "tags": [m.os_name, m.architecture or "x86_64", "LIVE_TELEMETRY"],
+            "telemetry": {
+                "cpu_percent": latest.cpu_percent if latest else 0.0,
+                "memory_percent": latest.memory_percent if latest else 0.0,
+                "disk_percent": latest.disk_percent if latest else 0.0,
+                "network_upload": latest.network_upload_speed if latest else 0.0,
+                "network_download": latest.network_download_speed if latest else 0.0,
+                "connections": latest.active_connections if latest else 0
+            } if latest else None
+        })
+
     return {
-        "count": len(_REMOTE_MACHINES),
-        "machines": list(_REMOTE_MACHINES.values())
+        "count": len(results),
+        "machines": results
     }
 
 
