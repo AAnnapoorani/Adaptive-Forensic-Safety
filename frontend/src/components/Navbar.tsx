@@ -47,7 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate, systemS
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '0.05em', color: 'var(--text-main)' }}>
-                JOCKY
+                SUVADU
               </span>
               <span className="badge badge-in-progress" style={{ fontSize: 10 }}>v1.0.0</span>
             </div>

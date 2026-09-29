@@ -102,7 +102,7 @@ function AppContent() {
         background: 'var(--bg-footer)',
         transition: 'background-color 0.2s ease, border-color 0.2s ease'
       }}>
-        JOCKY &bull; Adaptive Intent-Driven Digital Forensics Framework &bull; Read-Only Local Evidence Collection &bull; Deterministic Provenance
+        SUVADU &bull; Adaptive Intent-Driven Digital Forensics Framework &bull; Read-Only Local Evidence Collection &bull; Deterministic Provenance
       </footer>
     </div>
   );

@@ -176,7 +176,7 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
           Initiate Intent-Driven Forensic Investigation
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-          Specify your investigative objective. JOCKY will parse the intent, construct an evidence graph, compile the initial workflow, and dynamically adapt upon detecting correlation indicators.
+          Specify your investigative objective. SUVADU will parse the intent, construct an evidence graph, compile the initial workflow, and dynamically adapt upon detecting correlation indicators.
         </p>
       </div>
 
@@ -226,7 +226,7 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Code size={16} color="var(--accent-blue)" />
-                JOCKY Script Editor
+                SUVADU Script Editor
               </label>
               <span className="badge badge-in-progress" style={{ fontSize: 10 }}>DSL v1.0</span>
             </div>

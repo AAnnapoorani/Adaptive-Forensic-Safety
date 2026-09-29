@@ -184,7 +184,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', margin: 0 }}>
-              JOCKY Forensic Command Dashboard
+              SUVADU Forensic Command Dashboard
             </h1>
             <span className={`badge ${sseConnected ? 'badge-completed' : 'badge-warning'}`} style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: sseConnected ? '#10b981' : '#f59e0b', display: 'inline-block' }} />
@@ -286,7 +286,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {machines.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-dim)' }}>
             <Server size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
-            <div>No machines currently registered. Run the JOCKY local agent on a machine to connect:</div>
+            <div>No machines currently registered. Run the SUVADU local agent on a machine to connect:</div>
             <code style={{ display: 'inline-block', marginTop: 10, padding: '6px 12px', background: 'var(--bg-item)', borderRadius: 6, fontSize: 12 }}>
               python agent/jocky_agent.py --server http://localhost:8000
             </code>
@@ -444,7 +444,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         {investigations.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '30px 20px', color: 'var(--text-dim)' }}>
-            No investigations run yet. Click "Start Investigation" to compile a JOCKY DSL script.
+            No investigations run yet. Click "Start Investigation" to compile a SUVADU DSL script.
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
