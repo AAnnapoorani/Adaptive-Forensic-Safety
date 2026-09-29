@@ -4,12 +4,14 @@ from fastapi import FastAPI
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.core.database import init_db, SessionLocal
-from app.models.machine import Machine
-from app.utils.platform import get_machine_info
+from app.core.database import init_db
 from app.api import health, investigations, evidence, timeline, machines, reports
 from app.api import evasion
 from app.api import websocket as ws_router
+from app.api import telemetry
+
+from app.services.retention import start_retention_loop
+import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,38 +29,16 @@ async def lifespan(app: FastAPI):
             else:
                 print("[DB] Warning: Continuing startup without synchronous table initialization.")
 
-    # Auto-register current local machine
-    try:
-        db = SessionLocal()
-        try:
-            info = get_machine_info()
-            existing = db.query(Machine).filter(
-                (Machine.id == info["id"]) | (Machine.hostname == info["hostname"])
-            ).first()
-            if not existing:
-                machine = Machine(
-                    id=info["id"],
-                    hostname=info["hostname"],
-                    os_name=info["os_name"],
-                    os_version=info["os_version"],
-                    architecture=info["architecture"],
-                    ip_address=info["ip_address"],
-                    status="ACTIVE"
-                )
-                db.add(machine)
-                db.commit()
-            else:
-                existing.os_version = info["os_version"]
-                existing.ip_address = info["ip_address"]
-                setattr(existing, "status", "ACTIVE")
-                db.commit()
-        finally:
-            db.close()
-    except Exception as e:
-        print(f"Warning: Failed to auto-register machine: {e}")
+    # Start Free-Tier Retention Guardian background task
+    retention_task = asyncio.create_task(start_retention_loop())
 
     yield
-    # Shutdown logic if needed
+    # Clean shutdown
+    retention_task.cancel()
+    try:
+        await retention_task
+    except asyncio.CancelledError:
+        pass
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -87,6 +67,7 @@ app.include_router(machines.router, prefix=settings.API_PREFIX)
 app.include_router(reports.router, prefix=settings.API_PREFIX)
 app.include_router(evasion.router, prefix=settings.API_PREFIX)
 app.include_router(ws_router.router, prefix=settings.API_PREFIX)
+app.include_router(telemetry.router, prefix=settings.API_PREFIX)
 
 @app.get("/")
 def root():

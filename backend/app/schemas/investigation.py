@@ -6,6 +6,7 @@ class CreateInvestigationRequest(BaseModel):
     intent: Optional[str] = "suspicious_network_activity"
     script: Optional[str] = None
     machine_id: Optional[str] = None
+    auto_execute: Optional[bool] = False
 
 class PreviewScriptRequest(BaseModel):
     intent: Optional[str] = "suspicious_network_activity"

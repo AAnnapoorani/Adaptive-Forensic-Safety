@@ -3,13 +3,15 @@ import { Navbar } from './components/Navbar';
 import { DashboardPage } from './pages/DashboardPage';
 import { NewInvestigationPage } from './pages/NewInvestigationPage';
 import { InvestigationDetailPage } from './pages/InvestigationDetailPage';
+import { MachineDetailPage } from './pages/MachineDetailPage';
 import { EvasionLabPage } from './pages/EvasionLabPage';
 import { api } from './services/api';
 import { ThemeProvider } from './context/ThemeContext';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'new-investigation' | 'investigation-detail' | 'evasion-lab'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'new-investigation' | 'investigation-detail' | 'evasion-lab' | 'machine-detail'>('dashboard');
   const [activeInvestigationId, setActiveInvestigationId] = useState<string | null>(null);
+  const [selectedMachineId, setSelectedMachineId] = useState<string | null>(null);
   const [systemStatus, setSystemStatus] = useState<string>('checking...');
 
   useEffect(() => {
@@ -32,8 +34,14 @@ function AppContent() {
     setCurrentView('investigation-detail');
   };
 
-  const handleNewInvestigation = () => {
+  const handleNewInvestigation = (targetMachineId?: string) => {
+    if (targetMachineId) setSelectedMachineId(targetMachineId);
     setCurrentView('new-investigation');
+  };
+
+  const handleOpenMachine = (machineId: string) => {
+    setSelectedMachineId(machineId);
+    setCurrentView('machine-detail');
   };
 
   const handleInvestigationStarted = (id: string) => {
@@ -44,7 +52,7 @@ function AppContent() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar
-        currentView={currentView}
+        currentView={currentView === 'machine-detail' ? 'dashboard' : currentView}
         onNavigate={view => setCurrentView(view)}
         systemStatus={systemStatus}
       />
@@ -54,6 +62,15 @@ function AppContent() {
           <DashboardPage
             onOpenInvestigation={handleOpenInvestigation}
             onNewInvestigation={handleNewInvestigation}
+            onOpenMachine={handleOpenMachine}
+          />
+        )}
+
+        {currentView === 'machine-detail' && selectedMachineId && (
+          <MachineDetailPage
+            machineId={selectedMachineId}
+            onBack={() => setCurrentView('dashboard')}
+            onStartInvestigation={handleNewInvestigation}
           />
         )}
 

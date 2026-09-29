@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
+from typing import Any
 
-def to_iso_utc(dt: datetime | None) -> str | None:
+def to_iso_utc(dt: Any) -> str | None:
     """Format a datetime to standard ISO 8601 string with explicit UTC 'Z' timezone."""
     if dt is None:
         return None

@@ -37,7 +37,37 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 def init_db() -> None:
-    """Initialize all tables."""
+    """Initialize all tables and migrate new columns safely."""
     # Import models here to ensure they are registered with Base metadata
     import app.models  # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    # Lightweight migration for existing SQLite / Postgres tables
+    with engine.begin() as conn:
+        try:
+            # Check machine_processes columns
+            from sqlalchemy import inspect, text
+            inspector = inspect(engine)
+            cols = [c["name"] for c in inspector.get_columns("machine_processes")]
+            if "threat_level" not in cols:
+                conn.execute(text("ALTER TABLE machine_processes ADD COLUMN threat_level VARCHAR(32) DEFAULT 'CLEAN'"))
+            if "matched_rules_json" not in cols:
+                conn.execute(text("ALTER TABLE machine_processes ADD COLUMN matched_rules_json TEXT"))
+
+            # Check machines table columns
+            m_cols = [c["name"] for c in inspector.get_columns("machines")]
+            if "machine_id" not in m_cols:
+                conn.execute(text("ALTER TABLE machines ADD COLUMN machine_id VARCHAR(64)"))
+            if "os_type" not in m_cols:
+                conn.execute(text("ALTER TABLE machines ADD COLUMN os_type VARCHAR(32) DEFAULT 'Windows'"))
+            if "mac_address" not in m_cols:
+                conn.execute(text("ALTER TABLE machines ADD COLUMN mac_address VARCHAR(64)"))
+            if "agent_version" not in m_cols:
+                conn.execute(text("ALTER TABLE machines ADD COLUMN agent_version VARCHAR(32) DEFAULT '1.0.0'"))
+            if "first_seen" not in m_cols:
+                conn.execute(text("ALTER TABLE machines ADD COLUMN first_seen TIMESTAMP"))
+            if "metadata_json" not in m_cols:
+                conn.execute(text("ALTER TABLE machines ADD COLUMN metadata_json TEXT"))
+        except Exception as e:
+            # Table might not exist yet or dialect syntax difference, create_all already handled it
+            pass

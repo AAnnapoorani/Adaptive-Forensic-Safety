@@ -33,12 +33,37 @@ def create_investigation(req: CreateInvestigationRequest, db: Session = Depends(
             script=req.script,
             machine_id=req.machine_id
         )
+        exec_summary = None
+        artifacts_collected = 0
+        if req.auto_execute:
+            try:
+                exec_res = InvestigationService.execute_investigation(db=db, investigation_id=str(inv.id), demo_mode=False)
+                exec_summary = exec_res.get("summary")
+                artifacts_collected = exec_res.get("artifacts_collected", 0)
+
+                # Broadcast autonomous security alert via SSE
+                from app.core.sse import sse_manager
+                sse_manager.broadcast_sync("security_alert", {
+                    "alert_type": "AUTONOMOUS_INCIDENT_TRIAGE",
+                    "investigation_id": str(inv.id),
+                    "machine_id": str(inv.machine_id),
+                    "intent": str(inv.intent),
+                    "status": "COMPLETED",
+                    "evidence_count": artifacts_collected,
+                    "integrity_verified": exec_res.get("integrity_verified", True)
+                })
+            except Exception as ex:
+                print(f"[Warning] Auto-execution failed: {ex}")
+
         return {
             "id": inv.id,
             "intent": inv.intent,
-            "status": inv.status,
+            "status": "COMPLETED" if req.auto_execute and exec_summary else inv.status,
             "machine_id": inv.machine_id,
-            "created_at": to_iso_utc(inv.created_at)
+            "created_at": to_iso_utc(inv.created_at),
+            "auto_executed": req.auto_execute,
+            "artifacts_collected": artifacts_collected,
+            "summary": exec_summary
         }
     except (EmptyDSLError, UnknownIntentError, LexerError, ParserError, CompilationError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -2,13 +2,13 @@ import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 
-# Automatically load .env file if present
+# Automatically load .env file if present (override=True so local .env takes precedence)
 _backend_dir = Path(__file__).resolve().parent.parent.parent
 _env_file = _backend_dir / ".env"
 if _env_file.exists():
     try:
         from dotenv import load_dotenv
-        load_dotenv(_env_file)
+        load_dotenv(_env_file, override=True)
     except Exception:
         with open(_env_file, "r", encoding="utf-8") as _f:
             for _line in _f:
@@ -17,7 +17,7 @@ if _env_file.exists():
                     _k, _v = _line.split("=", 1)
                     _k = _k.strip()
                     _v = _v.strip().strip("'\"")
-                    if _k and _k not in os.environ:
+                    if _k:
                         os.environ[_k] = _v
 
 
@@ -90,6 +90,10 @@ class Settings(BaseModel):
         "http://127.0.0.1:3000",
         "*"
     ]
+
+    # Free-Tier Retention Guardian (Automated Pruning)
+    TELEMETRY_RETENTION_HOURS: int = Field(default_factory=lambda: int(os.getenv("TELEMETRY_RETENTION_HOURS", "48")))
+    RETENTION_CHECK_INTERVAL_SECONDS: int = Field(default_factory=lambda: int(os.getenv("RETENTION_CHECK_INTERVAL_SECONDS", "3600")))
 
 settings = Settings()
 

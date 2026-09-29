@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, BASE_URL } from '../services/api';
-import { Copy, Check, Printer } from 'lucide-react';
+import { Copy, Check, Printer, ShieldCheck } from 'lucide-react';
 
 interface ReportViewProps {
   investigationId: string;
@@ -119,7 +119,28 @@ export const ReportView: React.FC<ReportViewProps> = ({ investigationId, isOngoi
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <a
+            href={api.getCourtDossierHtmlUrl(investigationId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-sm"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+              color: '#fff',
+              textDecoration: 'none',
+              fontWeight: 600,
+              padding: '6px 12px',
+              borderRadius: 6
+            }}
+            title="Download Court-Admissible Forensic Certificate (Section 65B Indian Evidence Act / ISO/IEC 27037)"
+          >
+            <ShieldCheck size={14} />
+            Section 65B Court Dossier (PDF)
+          </a>
           <button className="btn btn-secondary btn-sm" onClick={handleCopy}>
             {copied ? <Check size={14} color="#10b981" /> : <Copy size={14} />}
             {copied ? 'Copied!' : mode === 'json' ? 'Copy JSON' : 'Copy Markdown'}

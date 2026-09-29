@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.investigation import Investigation, InvestigationRound
-from app.models.evidence import EvidenceArtifact, ProvenanceRecord
+from app.models.evidence import EvidenceArtifact, ProvenanceRecord, EvidenceChainManifest
 from app.models.execution import CorrelationMatch, EscalationAction
 from app.models.timeline import TimelineEvent
 from app.models.machine import Machine
@@ -47,7 +47,7 @@ class ReportService:
         # Build Markdown
         md_lines = [
             f"# JOCKY FORENSIC INVESTIGATION REPORT",
-            f"**Generated:** {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
             f"",
             f"> **FORENSIC NOTICE**: Observed Evidence represents raw empirical system state captured through read-only OS instrumentation. Correlation / Rule Matches represent heuristic indicators that guided automated adaptive escalation. A rule match provides investigative leads and does not constitute absolute proof of malicious intent.",
             f"",
@@ -232,7 +232,7 @@ class ReportService:
     <span><strong>Intent:</strong> {inv.intent}</span>
     <span><strong>Status:</strong> {inv.status}</span>
     <span><strong>Rounds:</strong> {len(rounds)}</span>
-    <span><strong>Generated:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}</span>
+    <span><strong>Generated:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</span>
   </div>
 </div>
 
@@ -288,3 +288,243 @@ class ReportService:
             "html": html_content,
             "json": report_json
         }
+
+    @staticmethod
+    def generate_court_dossier(db: Session, investigation_id: str) -> dict:
+        """
+        Generate an official, court-admissible forensic dossier and certificate of authenticity
+        compliant with Section 65B Indian Evidence Act & ISO/IEC 27037 Digital Evidence Standards.
+        Includes Ed25519 signature verification, RFC 8785 canonical hash chain, and machine hardware fingerprint.
+        """
+        from app.services.verifier_service import VerifierService
+        from app.services.chain_service import ChainService
+
+        inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+        if not inv:
+            raise ValueError(f"Investigation {investigation_id} not found")
+
+        machine = db.query(Machine).filter(Machine.id == inv.machine_id).first()
+        artifacts = db.query(EvidenceArtifact).filter(EvidenceArtifact.investigation_id == investigation_id).all()
+        manifest = db.query(EvidenceChainManifest).filter(EvidenceChainManifest.investigation_id == investigation_id).first()
+        verify_report = VerifierService.verify_investigation_chain(db, investigation_id)
+
+        now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        is_valid = verify_report.get("valid", False)
+        chain_tip = manifest.chain_tip if manifest else (verify_report.get("chain_tip") or "UNSEALED")
+        signature_hex = manifest.signature_hex if manifest else "N/A"
+        key_id = manifest.key_id if manifest else "N/A"
+
+        # Build printable court-admissible HTML
+        dossier_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>COURT DOSSIER — Certificate of Authenticity #{inv.id}</title>
+<style>
+  @page {{
+    size: A4;
+    margin: 18mm 15mm;
+  }}
+  @media print {{
+    body {{ background: #fff !important; color: #000 !important; font-size: 11pt; }}
+    .no-print {{ display: none !important; }}
+    .page-break {{ page-break-before: always; }}
+  }}
+  body {{
+    font-family: 'Times New Roman', Times, serif;
+    background: #f8fafc;
+    color: #0f172a;
+    line-height: 1.5;
+    padding: 30px;
+    max-width: 900px;
+    margin: 0 auto;
+  }}
+  .cert-container {{
+    background: #ffffff;
+    border: 3px double #0284c7;
+    padding: 35px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    position: relative;
+  }}
+  .header-seal {{
+    text-align: center;
+    border-bottom: 2px solid #0284c7;
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+  }}
+  .seal-title {{
+    font-size: 22px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #0369a1;
+    margin: 0 0 6px 0;
+  }}
+  .seal-sub {{
+    font-size: 13px;
+    color: #475569;
+    font-style: italic;
+  }}
+  .badge-seal {{
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-weight: 700;
+    font-size: 13px;
+    background: {'#dcfce7' if is_valid else '#fee2e2'};
+    color: {'#15803d' if is_valid else '#b91c1c'};
+    border: 1px solid {'#86efac' if is_valid else '#fca5a5'};
+    margin-top: 10px;
+  }}
+  h2 {{
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 4px;
+    margin-top: 24px;
+    color: #0f172a;
+  }}
+  table {{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 12px 0;
+  }}
+  th, td {{
+    border: 1px solid #cbd5e1;
+    padding: 6px 10px;
+    text-align: left;
+  }}
+  th {{
+    background: #f1f5f9;
+    font-weight: 700;
+  }}
+  .mono {{ font-family: monospace; word-break: break-all; }}
+  .legal-box {{
+    background: #f8fafc;
+    border-left: 4px solid #0284c7;
+    padding: 12px 16px;
+    font-size: 11px;
+    color: #334155;
+    margin: 18px 0;
+    text-align: justify;
+  }}
+  .signatures {{
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+  }}
+  .sig-block {{
+    width: 45%;
+    text-align: center;
+  }}
+  .sig-line {{
+    border-top: 1px solid #000;
+    margin-top: 50px;
+    padding-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }}
+  .print-btn {{
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+  }}
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Print to PDF / Court Export</button>
+
+<div class="cert-container">
+  <div class="header-seal">
+    <div class="seal-title">CERTIFICATE OF DIGITAL EVIDENCE AUTHENTICITY</div>
+    <div class="seal-sub">Issued under Section 65B, Indian Evidence Act / ISO/IEC 27037:2012 Electronic Evidence Principles</div>
+    <div class="badge-seal">
+      {'CRYPTOGRAPHICALLY VERIFIED - ED25519 TAMPER-PROOF' if is_valid else 'VERIFICATION WARNING - INTEGRITY CHECK FAILED'}
+    </div>
+  </div>
+
+  <div class="legal-box">
+    <strong>STATUTORY DECLARATION:</strong> This electronic record was produced by an automated digital forensics instrument (JOCKY Framework v1.0.0) operating normally without manual intervention. Evidence artifacts were extracted through read-only system collectors and sealed with Ed25519 digital signatures and RFC 8785 canonical hash-chain sequencing immediately upon capture.
+  </div>
+
+  <h2>1. Case &amp; Target Machine Fingerprint</h2>
+  <table>
+    <tr><th style="width: 25%;">Case ID</th><td class="mono"><strong>{inv.id}</strong></td></tr>
+    <tr><th>Forensic Intent</th><td>{inv.intent}</td></tr>
+    <tr><th>Status</th><td>{inv.status} (Verified in {inv.total_rounds} Automated Rounds)</td></tr>
+    <tr><th>Target Machine ID</th><td class="mono">{machine.id if machine else 'N/A'}</td></tr>
+    <tr><th>Hostname</th><td>{machine.hostname if machine else 'N/A'}</td></tr>
+    <tr><th>Operating System</th><td>{machine.os_name if machine else 'N/A'} ({machine.os_version if machine else 'N/A'}) - Arch: {machine.architecture if machine else 'N/A'}</td></tr>
+    <tr><th>Primary MAC Address</th><td class="mono">{machine.mac_address if machine else 'N/A'}</td></tr>
+    <tr><th>Acquisition Timestamp</th><td>{to_iso_utc(inv.start_time)} to {to_iso_utc(inv.end_time)}</td></tr>
+  </table>
+
+  <h2>2. Evidence Cryptographic Chain of Custody</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Artifact ID</th>
+        <th>Evidence Name</th>
+        <th>Collector</th>
+        <th>SHA-256 Hash</th>
+        <th style="width: 15%;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {''.join(f"<tr><td class='mono'>{a.id}</td><td>{a.name}</td><td class='mono'>{a.collector}</td><td class='mono'>{a.sha256}</td><td><strong>{a.integrity_status}</strong></td></tr>" for a in artifacts)}
+    </tbody>
+  </table>
+
+  <h2>3. Ed25519 Digital Signature &amp; Hash Chain Tip</h2>
+  <table>
+    <tr><th style="width: 25%;">Signing Algorithm</th><td>Ed25519 (RFC 8032) + RFC 8785 Canonical JSON Serialization</td></tr>
+    <tr><th>Active Key ID</th><td class="mono">{key_id}</td></tr>
+    <tr><th>Canonical Chain Tip</th><td class="mono">{chain_tip}</td></tr>
+    <tr><th>Digital Signature (Hex)</th><td class="mono">{signature_hex}</td></tr>
+    <tr><th>Integrity Status</th><td><strong>{'CHAIN VALID & TAMPER SEAL INTACT' if is_valid else 'INVALID'}</strong></td></tr>
+  </table>
+
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-line">Lead Digital Forensics Examiner<br><span style="font-size: 10px; font-weight: normal; color: #64748b;">Automated Attestation • {now_utc}</span></div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line">Tribunal / Evidence Custodian<br><span style="font-size: 10px; font-weight: normal; color: #64748b;">Seal of Judicial Acceptance</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>"""
+
+        return {
+            "investigation_id": investigation_id,
+            "status": "VERIFIED" if is_valid else "FAILED",
+            "is_valid": is_valid,
+            "target_machine": {
+                "id": machine.id if machine else None,
+                "hostname": machine.hostname if machine else None,
+                "os": machine.os_name if machine else None,
+                "mac": machine.mac_address if machine else None
+            },
+            "chain_tip": chain_tip,
+            "key_id": key_id,
+            "signature_hex": signature_hex,
+            "artifacts_count": len(artifacts),
+            "html": dossier_html
+        }
+

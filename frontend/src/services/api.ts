@@ -1,5 +1,8 @@
 import type {
   Machine,
+  MachineTelemetryPoint,
+  MachineProcess,
+  ForensicEventItem,
   InvestigationSummary,
   InvestigationDetail,
   PlanPreview,
@@ -10,7 +13,8 @@ import type {
   InvestigationRound,
   ReportData,
   ChainVerificationReport,
-  ChainManifest
+  ChainManifest,
+  AgentTriageCommandItem
 } from "../types";
 
 
@@ -56,8 +60,33 @@ export const api = {
   // Machines
   getMachines: () => request<Machine[]>("/machines"),
   getMachine: (id: string) => request<Machine>(`/machines/${id}`),
+  getMachineTelemetry: (id: string, limit: number = 60) =>
+    request<MachineTelemetryPoint[]>(`/machines/${id}/telemetry?limit=${limit}`),
+  getMachineProcesses: (id: string) =>
+    request<MachineProcess[]>(`/machines/${id}/processes`),
+  getMachineEvents: (id: string, limit: number = 50) =>
+    request<ForensicEventItem[]>(`/machines/${id}/events?limit=${limit}`),
+  getStreamUrl: () => `${BASE_URL}/stream`,
 
-  // Investigations
+  // Triage Commands & Remote Shell (Enhancement 3)
+  dispatchTriageCommand: (machineId: string, command: string) =>
+    request<AgentTriageCommandItem>(`/machines/${machineId}/commands`, {
+      method: "POST",
+      body: JSON.stringify({ command })
+    }),
+  getTriageCommands: (machineId: string) =>
+    request<AgentTriageCommandItem[]>(`/machines/${machineId}/commands`),
+
+  // Retention Guardian (Enhancement 1)
+  triggerPruning: (hours?: number) =>
+    request<any>(`/telemetry/prune${hours ? `?hours=${hours}` : ''}`, { method: "POST" }),
+
+  // Court Dossier & Legal Certificate (Enhancement 4)
+  getCourtDossier: (investigationId: string) =>
+    request<any>(`/investigations/${investigationId}/dossier`),
+  getCourtDossierHtmlUrl: (investigationId: string) =>
+    `${BASE_URL}/investigations/${investigationId}/dossier/html`,
+
   listInvestigations: () => request<InvestigationSummary[]>("/investigations"),
   getInvestigation: (id: string) => request<InvestigationDetail>(`/investigations/${id}`),
   createInvestigation: (data: { intent?: string; script?: string; machine_id?: string }) =>

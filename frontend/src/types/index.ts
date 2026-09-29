@@ -1,12 +1,88 @@
 export interface Machine {
   id: string;
+  machine_id?: string;
   hostname: string;
+  os_type: 'Windows' | 'Linux' | 'macOS' | string;
   os_name: string;
   os_version?: string;
   architecture?: string;
   ip_address?: string;
-  status: string;
+  mac_address?: string;
+  agent_version?: string;
+  status: 'ONLINE' | 'OFFLINE' | 'ACTIVE' | string;
   last_seen: string;
+  first_seen?: string;
+  created_at?: string;
+  latest_metrics?: {
+    cpu_percent: number;
+    cpu_cores?: number;
+    cpu_freq_mhz?: number;
+    memory_total_bytes?: number;
+    memory_used_bytes?: number;
+    memory_available_bytes?: number;
+    memory_percent: number;
+    disk_total_bytes?: number;
+    disk_used_bytes?: number;
+    disk_free_bytes?: number;
+    disk_percent: number;
+    network_bytes_sent?: number;
+    network_bytes_recv?: number;
+    network_upload_speed: number;
+    network_download_speed: number;
+    active_connections: number;
+    timestamp?: string;
+  };
+}
+
+export interface MachineTelemetryPoint {
+  timestamp: string;
+  cpu_percent: number;
+  memory_percent: number;
+  disk_percent: number;
+  network_upload_speed: number;
+  network_download_speed: number;
+  active_connections: number;
+}
+
+export interface MachineProcess {
+  pid: number;
+  name: string;
+  exe_path?: string;
+  username: string;
+  cpu_percent: number;
+  memory_percent: number;
+  memory_rss_bytes: number;
+  status: string;
+  create_time?: string;
+  timestamp?: string;
+  threat_level?: 'CLEAN' | 'SUSPICIOUS' | 'HIGH' | 'CRITICAL' | string;
+  matched_rules?: string[];
+}
+
+export interface AgentTriageCommandItem {
+  id: string;
+  command: string;
+  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  dispatched_at: string;
+  completed_at?: string;
+  exit_code?: number;
+  output?: string;
+  error?: string;
+  signed_hash?: string;
+}
+
+export interface ForensicEventItem {
+  id: string;
+  event_type: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | 'INFO';
+  source: string;
+  description: string;
+  process_name?: string;
+  pid?: number;
+  user?: string;
+  remote_ip?: string;
+  metadata_json?: string;
+  timestamp: string;
 }
 
 export interface InvestigationSummary {
