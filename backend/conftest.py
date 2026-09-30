@@ -8,6 +8,9 @@ import os
 import inspect
 import asyncio
 
+if "DATABASE_URL" not in os.environ:
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
 # Add backend/ directory to sys.path so `from app.xxx import ...` works
 sys.path.insert(0, os.path.dirname(__file__))
 

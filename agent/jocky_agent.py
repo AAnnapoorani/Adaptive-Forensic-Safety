@@ -25,6 +25,12 @@ AGENT_VERSION = "1.0.0"
 
 
 def main():
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
     parser = argparse.ArgumentParser(description="JOCKY Standalone Machine Agent")
     parser.add_argument("--server", default="http://localhost:8000", help="FastAPI backend URL (default: http://localhost:8000)")
     parser.add_argument("--interval", type=int, default=5, help="Telemetry interval in seconds (default: 5)")
