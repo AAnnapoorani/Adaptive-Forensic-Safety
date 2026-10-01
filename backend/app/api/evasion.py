@@ -27,9 +27,12 @@ JOCKY Extended REST API Endpoints — 100% Live Implementation
   POST /api/jocky/remote-machines/collect — Parallel multi-machine collection
 """
 
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, HTTPException, Depends
+# pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel
 from typing import Any
 
