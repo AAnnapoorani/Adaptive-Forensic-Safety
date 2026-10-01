@@ -15,6 +15,7 @@ from app.collectors.chain_collector import (
     ChainVerifyCollector,
     ChainExportCollector
 )
+from app.collectors.ebpf_linux import LinuxEbpfCollector
 
 COLLECTOR_REGISTRY: dict[str, BaseCollector] = {
     "SYSTEM.INFO": SystemInfoCollector(),
@@ -35,6 +36,8 @@ COLLECTOR_REGISTRY: dict[str, BaseCollector] = {
     "CHAIN.SIGN": ChainSignCollector(),
     "CHAIN.VERIFY": ChainVerifyCollector(),
     "CHAIN.EXPORT": ChainExportCollector(),
+    # ── Phase 23: Linux eBPF Kernel Telemetry ──────────────────────────────
+    "EBPF.TRACE": LinuxEbpfCollector(),
 }
 
 

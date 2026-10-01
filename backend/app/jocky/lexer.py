@@ -46,6 +46,8 @@ KNOWN_OPERATIONS = {
     "CHAIN.SIGN",
     "CHAIN.VERIFY",
     "CHAIN.EXPORT",
+    # ── Phase 23: Linux eBPF Kernel Tracing ───────────────────────────
+    "EBPF.TRACE",
 }
 
 KNOWN_KEYWORDS = {

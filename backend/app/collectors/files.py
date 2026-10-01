@@ -94,11 +94,14 @@ class FileHashCollector(BaseCollector):
         raw_path = params.get("path")
         target_path = Path(raw_path)
 
-        # If relative, resolve against SAFE_SCAN_DIR or BASE_DIR
+        # If relative, check if already valid or resolve against SAFE_SCAN_DIR / BASE_DIR
         if not target_path.is_absolute():
-            potential = settings.SAFE_SCAN_DIR / target_path
-            if potential.exists():
-                target_path = potential
+            if target_path.exists():
+                pass
+            elif (settings.SAFE_SCAN_DIR / target_path).exists():
+                target_path = settings.SAFE_SCAN_DIR / target_path
+            elif (settings.BACKEND_DIR / target_path).exists():
+                target_path = settings.BACKEND_DIR / target_path
             else:
                 target_path = settings.BASE_DIR / target_path
 

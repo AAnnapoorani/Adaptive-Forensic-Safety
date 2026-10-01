@@ -188,6 +188,19 @@ async def ingest_telemetry(packet: TelemetryPacket, db: Session = Depends(get_db
     for bevt in broadcast_events:
         await sse_manager.broadcast("forensic_event", bevt)
 
+    # Phase 21: Autonomous Anomaly-to-Incident Auto-Triage Evaluation
+    try:
+        from app.services.auto_triage import AutoTriageService
+        AutoTriageService.evaluate_telemetry(
+            db=db,
+            machine_id=machine.id,
+            metrics=m,
+            processes=packet.processes,
+            events=packet.events
+        )
+    except Exception:
+        pass
+
     return {
         "status": "INGESTED",
         "machine_id": machine.id,
