@@ -3,10 +3,7 @@
     "backend"
   ],
   "extraPaths": [
-    "backend",
-    "C:\\Users\\ANNAPOORANI\\AppData\\Local\\Programs\\Python\\Python310\\lib\\site-packages",
-    "C:\\Users\\ANNAPOORANI\\AppData\\Roaming\\Python\\Python310\\site-packages"
+    "backend"
   ],
-  "pythonPath": "C:\\Users\\ANNAPOORANI\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
   "reportMissingImports": "none"
 }
