@@ -239,4 +239,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ machine_ids, operations, credentials: {} })
     }),
+
+  // ── AI Forensics Intelligence & ETW/YARA Engine ───────────────────────
+  getAiAnalysis: (investigationId: string) =>
+    request<any>(`/investigations/${investigationId}/ai-analysis`),
+
+  getSigmaRule: (investigationId: string) =>
+    request<any>(`/investigations/${investigationId}/sigma-rule`),
+
+  getEtwYaraAudit: () =>
+    request<any>('/jocky/etw-yara-audit'),
 };

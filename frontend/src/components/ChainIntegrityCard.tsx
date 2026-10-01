@@ -14,7 +14,9 @@ import {
   FileArchive,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 
 interface ChainIntegrityCardProps {
@@ -175,6 +177,17 @@ export const ChainIntegrityCard: React.FC<ChainIntegrityCardProps> = ({
               {signing ? 'Signing...' : 'Re-sign Tip'}
             </button>
           )}
+
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => window.open(api.getCourtDossierHtmlUrl(investigationId), '_blank')}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-blue)', borderColor: 'var(--accent-blue)' }}
+            title="Open printable Section 65B Legal Certificate"
+          >
+            <FileText size={13} />
+            Section 65B Court Dossier
+            <ExternalLink size={11} />
+          </button>
 
           <button
             className="btn btn-primary btn-sm"

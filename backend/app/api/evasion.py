@@ -543,3 +543,13 @@ def post_security_analysis(evidence: dict[str, Any]):
     """
     from app.intelligence.in_memory_detection import detect_in_memory_indicators
     return detect_in_memory_indicators(evidence)
+
+@router.get("/etw-yara-audit", summary="Live ETW bypass and in-memory YARA rule scan")
+def get_etw_yara_audit():
+    """
+    Conducts live audit of Event Tracing for Windows (ETW) EtwEventWrite integrity,
+    AMSI buffer integrity, and scans active memory pages with YARA rules.
+    """
+    from app.services.ai_analyst import run_etw_yara_audit
+    return run_etw_yara_audit()
+

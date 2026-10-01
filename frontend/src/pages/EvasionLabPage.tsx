@@ -3,10 +3,11 @@ import {
   Cpu, Shield, Zap, Lock, Globe, Server, RefreshCw,
   ChevronDown, ChevronRight, AlertTriangle, CheckCircle,
   Copy, Eye, EyeOff, Wifi, WifiOff, Terminal,
-  Activity, Radio, Hash, Key, Link2, ShieldCheck, XCircle, Play
+  Activity, Radio, Hash, Key, Link2, ShieldCheck, XCircle, Play, Bug
 } from 'lucide-react';
 import { api } from '../services/api';
 import { LiveMonitor } from '../components/LiveMonitor';
+import { EtwYaraTab } from '../components/EtwYaraTab';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1601,7 +1602,7 @@ python standalone_verifier.py --chain jocky-chain.json --evidence-dir evidence/
 
 // ── Main Evasion Lab Page ───────────────────────────────────────────────────
 
-type TabId = 'live' | 'polymorphic' | 'encryption' | 'integrity' | 'drivers' | 'memory' | 'routing' | 'remote';
+type TabId = 'live' | 'polymorphic' | 'encryption' | 'integrity' | 'drivers' | 'memory' | 'etw-yara' | 'routing' | 'remote';
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[] = [
   { id: 'live', label: 'Live Monitor', icon: <Radio size={15} />, color: '#10b981' },
@@ -1610,6 +1611,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode; color: string }[]
   { id: 'integrity', label: 'Evidence Integrity & Tamper Demo', icon: <Link2 size={15} />, color: '#38bdf8' },
   { id: 'drivers', label: 'BYOVD / Drivers', icon: <Cpu size={15} />, color: '#f43f5e' },
   { id: 'memory', label: 'Memory Injection', icon: <Activity size={15} />, color: '#06b6d4' },
+  { id: 'etw-yara', label: 'ETW & YARA Scanner', icon: <Bug size={15} />, color: '#ec4899' },
   { id: 'routing', label: 'CDN Routing', icon: <Globe size={15} />, color: '#10b981' },
   { id: 'remote', label: 'Remote Agents', icon: <Server size={15} />, color: '#38bdf8' },
 ];
@@ -1757,6 +1759,7 @@ export const EvasionLabPage: React.FC = () => {
         {activeTab === 'integrity' && <IntegrityTamperTab activeMachine={activeMachine} />}
         {activeTab === 'drivers' && <DriversTab activeMachine={activeMachine} />}
         {activeTab === 'memory' && <MemoryTab activeMachine={activeMachine} />}
+        {activeTab === 'etw-yara' && <EtwYaraTab />}
         {activeTab === 'routing' && <RoutingTab />}
         {activeTab === 'remote' && (
           <RemoteTab

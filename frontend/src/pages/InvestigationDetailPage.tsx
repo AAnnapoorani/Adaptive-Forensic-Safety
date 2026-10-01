@@ -16,6 +16,7 @@ import { ArtifactsTable } from '../components/ArtifactsTable';
 import { WorkflowStepsView } from '../components/WorkflowStepsView';
 import { ReportView } from '../components/ReportView';
 import { ChainIntegrityCard } from '../components/ChainIntegrityCard';
+import { AiAnalystView } from '../components/AiAnalystView';
 import { formatDateTime, formatTime } from '../utils/date';
 
 import {
@@ -33,7 +34,8 @@ import {
   RefreshCw,
   Loader2,
   CheckCircle2,
-  Activity
+  Activity,
+  Sparkles
 } from 'lucide-react';
 
 interface InvestigationDetailPageProps {
@@ -344,6 +346,9 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
         <button className={`tab-btn ${activeTab === 'provenance' ? 'active' : ''}`} onClick={() => setActiveTab('provenance')}>
           <ShieldCheck size={15} /> Provenance ({provenance.length})
         </button>
+        <button className={`tab-btn ${activeTab === 'ai-analyst' ? 'active' : ''}`} onClick={() => setActiveTab('ai-analyst')} style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>
+          <Sparkles size={15} /> AI Analyst
+        </button>
         <button className={`tab-btn ${activeTab === 'report' ? 'active' : ''}`} onClick={() => setActiveTab('report')}>
           <FileText size={15} /> Final Report
         </button>
@@ -433,6 +438,10 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
 
       {activeTab === 'provenance' && (
         <ProvenanceTable records={provenance} />
+      )}
+
+      {activeTab === 'ai-analyst' && (
+        <AiAnalystView investigationId={investigationId} />
       )}
 
       {activeTab === 'report' && (

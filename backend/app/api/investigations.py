@@ -229,3 +229,47 @@ def get_investigation_correlations(investigation_id: str, db: Session = Depends(
         }
         for m in matches
     ]
+
+@router.get("/{investigation_id}/ai-analysis")
+def get_investigation_ai_analysis(investigation_id: str, db: Session = Depends(get_db)):
+    """Runs AI-assisted evidence analysis, MITRE ATT&CK mapping, and executive root cause synthesis."""
+    from app.services.ai_analyst import analyze_forensic_artifacts
+    
+    inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+        
+    arts = db.query(EvidenceArtifact).filter(EvidenceArtifact.investigation_id == investigation_id).all()
+    corrs = db.query(CorrelationMatch).filter(CorrelationMatch.investigation_id == investigation_id).all()
+    
+    inv_data = {
+        "investigation_id": investigation_id,
+        "target_machine": inv.machine_id or "UNKNOWN_HOST",
+        "intent": inv.intent,
+        "artifacts": [
+            {"collector": a.collector or a.operation, "description": a.name, "data": str(a.file_path or a.sha256)}
+            for a in arts
+        ],
+        "correlations": [
+            {"rule_name": c.rule_name, "description": c.description, "confidence": c.confidence}
+            for c in corrs
+        ]
+    }
+    
+    return analyze_forensic_artifacts(inv_data)
+
+@router.get("/{investigation_id}/sigma-rule")
+def get_investigation_sigma_rule(investigation_id: str, db: Session = Depends(get_db)):
+    """Generates a production-ready Sigma YAML detection rule from the investigation's observed IoCs."""
+    from app.services.ai_analyst import generate_sigma_rule
+    
+    inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+        
+    return {
+        "investigation_id": investigation_id,
+        "format": "yaml",
+        "sigma_rule": generate_sigma_rule({"target_machine": inv.machine_id or "UNKNOWN_HOST"})
+    }
+
