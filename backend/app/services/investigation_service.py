@@ -39,10 +39,19 @@ class InvestigationService:
 
         # If script provided, compile and parse intent
         parsed_intent = intent
+        total_rounds = 1
         if script and script.strip():
             ast_root, ir = JockyCompiler.compile(script)
             if ir.intent:
                 parsed_intent = ir.intent
+            if ir.round_limit:
+                total_rounds = ir.round_limit
+            if ir.target_id:
+                m = db.query(Machine).filter((Machine.id == ir.target_id) | (Machine.hostname == ir.target_id)).first()
+                if m:
+                    machine_id = m.id
+                else:
+                    machine_id = ir.target_id
             for ins in ir.instructions:
                 if ins.kind == "INVESTIGATION":
                     parsed_intent = ins.parameters.get("intent", parsed_intent)
@@ -55,7 +64,7 @@ class InvestigationService:
             machine_id=machine_id,
             status="CREATED",
             current_round=1,
-            total_rounds=1,
+            total_rounds=total_rounds,
             start_time=datetime.utcnow()
         )
         db.add(inv)
@@ -166,8 +175,9 @@ class InvestigationService:
         # Build initial Evidence Requirement Graph
         graph = build_evidence_graph_for_intent(inv.intent, initial_ops)
 
+        round_limit = inv.total_rounds if (inv.total_rounds and inv.total_rounds > 0) else settings.MAX_ROUNDS
         correlation_engine = CorrelationEngine()
-        escalation_engine = AdaptiveEscalationEngine(max_rounds=settings.MAX_ROUNDS)
+        escalation_engine = AdaptiveEscalationEngine(max_rounds=round_limit)
 
         executed_operations: set[str] = set()
         triggered_rules: set[str] = set()
@@ -178,7 +188,7 @@ class InvestigationService:
 
         matched_rules_set: set[str] = set()
 
-        while current_round <= settings.MAX_ROUNDS:
+        while current_round <= round_limit:
             # 1. Create InvestigationRound record
             round_record_id = f"RND-{inv.id}-{current_round:02d}"
             trigger_reason = (

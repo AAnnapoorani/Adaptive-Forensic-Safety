@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Machine, PlanPreview } from '../types';
 import { EvidenceGraphView } from '../components/EvidenceGraphView';
-import { Play, Eye, Code, Server, Sparkles, AlertCircle } from 'lucide-react';
+import { Play, Eye, Code, Server, Sparkles, AlertCircle, Layers, FileCode, Copy, Check } from 'lucide-react';
 
 interface NewInvestigationPageProps {
   onInvestigationStarted: (id: string) => void;
@@ -10,48 +10,51 @@ interface NewInvestigationPageProps {
 }
 
 const TEMPLATES: Record<string, string> = {
-  suspicious_network_activity: `# Investigative Intent: Suspicious Network Activity
-# JOCKY compiles this into an initial requirement graph,
-# gathers process and socket telemetry, and adaptively escalates
-# if unusual outbound connections or PowerShell C2 activity are identified.
-
-INVESTIGATE suspicious_network_activity
+  suspicious_network_activity: `INVESTIGATE suspicious_network_activity
+TARGET "JOCKY-93358801DA45"
+ROUND_LIMIT 3
+OPTIONS {
+  stealth_mode: true,
+  evidence_level: "comprehensive"
+}
 `,
   possible_malware_execution: `# Investigative Intent: Possible Malware Execution
 # Examines recently dropped executables, command line parameters,
 # parent-child lineages, and system event logs.
 
 INVESTIGATE possible_malware_execution
+TARGET "JOCKY-93358801DA45"
+ROUND_LIMIT 2
 `,
   system_compromise: `# Investigative Intent: System Compromise Assessment
 # Full forensic triage across user accounts, active sockets,
 # process trees, and audit events.
 
 INVESTIGATE system_compromise
+TARGET "JOCKY-93358801DA45"
+ROUND_LIMIT 3
 `,
   kernel_evasion_analysis: `# Investigative Intent: Kernel-Level Evasion & BYOVD Detection
 # Enumerates ALL loaded kernel-mode drivers via direct Win32
 # EnumDeviceDrivers (ctypes, low EDR visibility) and cross-references
 # each against a curated CVE-linked BYOVD vulnerability database.
-# Detects drivers used by BlackByte, AvosLocker, Scattered Spider, Lazarus.
 
 INVESTIGATE kernel_evasion_analysis
+ROUND_LIMIT 2
 `,
   memory_injection_hunt: `# Investigative Intent: In-Memory Code Injection Hunt
 # Scans all process virtual address spaces via direct VirtualQueryEx
 # (ctypes kernel32) to detect private committed executable regions.
-# Primary indicators: process hollowing, reflective DLL injection,
-# shellcode injection, and thread execution hijacking.
 
 INVESTIGATE memory_injection_hunt
+ROUND_LIMIT 2
 `,
   byovd_detection: `# Investigative Intent: BYOVD Full-Spectrum Detection
 # Combined kernel driver enumeration + in-memory injection scan
-# + process lineage analysis. Full-spectrum detection of BYOVD attacks
-# combined with memory-resident payload execution.
-# The most advanced EDR evasion technique class.
+# + process lineage analysis. Full-spectrum detection of BYOVD attacks.
 
 INVESTIGATE byovd_detection
+ROUND_LIMIT 3
 `,
   manual: `# Custom Forensic Workflow Script
 # Specify explicit forensic collector primitives
@@ -79,7 +82,7 @@ const detectIntentFromScript = (code: string): string => {
   const lines = code.split('\n');
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.startsWith('#')) continue;
+    if (trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
     const match = trimmed.match(/^INVESTIGATE\s+([a-zA-Z0-9_]+)/i);
     if (match) {
       const parsedIntent = match[1].toLowerCase();
@@ -89,6 +92,19 @@ const detectIntentFromScript = (code: string): string => {
     }
   }
   return 'manual';
+};
+
+const detectTargetFromScript = (code: string): string | null => {
+  const lines = code.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+    const match = trimmed.match(/^TARGET\s+["']?([a-zA-Z0-9_\-\.]+)["']?/i);
+    if (match) {
+      return match[1];
+    }
+  }
+  return null;
 };
 
 export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
@@ -103,12 +119,16 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [irViewTab, setIrViewTab] = useState<'ir' | 'tokens'>('ir');
+  const [copiedIr, setCopiedIr] = useState(false);
 
   useEffect(() => {
     api.getMachines().then(res => {
       setMachines(res);
       if (res.length > 0) {
-        setSelectedMachine(res[0].id);
+        const scriptTarget = detectTargetFromScript(script);
+        const match = scriptTarget ? res.find(m => m.id === scriptTarget || m.hostname === scriptTarget) : null;
+        setSelectedMachine(match ? match.id : res[0].id);
       }
     }).catch(console.error);
   }, []);
@@ -117,6 +137,11 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
     setIntent(newIntent);
     if (TEMPLATES[newIntent]) {
       setScript(TEMPLATES[newIntent]);
+      const scriptTarget = detectTargetFromScript(TEMPLATES[newIntent]);
+      if (scriptTarget && machines.length > 0) {
+        const match = machines.find(m => m.id === scriptTarget || m.hostname === scriptTarget);
+        if (match) setSelectedMachine(match.id);
+      }
     }
   };
 
@@ -124,6 +149,11 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
     setScript(newScript);
     const detected = detectIntentFromScript(newScript);
     setIntent(detected);
+    const scriptTarget = detectTargetFromScript(newScript);
+    if (scriptTarget && machines.length > 0) {
+      const match = machines.find(m => m.id === scriptTarget || m.hostname === scriptTarget);
+      if (match) setSelectedMachine(match.id);
+    }
   };
 
   const handlePreview = async () => {
@@ -319,10 +349,10 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
               className="btn btn-secondary"
               onClick={handlePreview}
               disabled={loadingPreview || executing}
-              style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 600 }}
             >
               <Eye size={16} />
-              {loadingPreview ? 'Compiling Preview...' : 'Preview Plan'}
+              {loadingPreview ? 'Compiling & Previewing Plan...' : 'Compile & Preview Plan'}
             </button>
 
             <button
@@ -353,10 +383,10 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                 <span className="badge badge-in-progress" style={{ fontSize: 11, textTransform: 'uppercase' }}>Dry-Run Preview</span>
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>No collection executed yet</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Plan lower-bound verified before execution</span>
               </div>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-main)' }}>
-                Forensic Workflow Preview Plan
+                Forensic Workflow Preview Plan & Evidence Requirement Graph
               </h2>
             </div>
             <button
@@ -370,7 +400,7 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
           </div>
 
           {/* Parsed Intent & Initial Operations Highlights */}
-          <div className="glass-panel" style={{ padding: 16, marginBottom: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          <div className="glass-panel" style={{ padding: 16, marginBottom: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
             <div>
               <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
                 Parsed Intent
@@ -379,6 +409,28 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
                 {previewPlan.intent}
               </div>
             </div>
+
+            {previewPlan.ir?.target_id && (
+              <div>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
+                  Target Endpoint
+                </span>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 600, color: 'var(--text-main)', fontFamily: 'Fira Code, monospace' }}>
+                  {previewPlan.ir.target_id}
+                </div>
+              </div>
+            )}
+
+            {previewPlan.ir?.round_limit && (
+              <div>
+                <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
+                  Round Limit
+                </span>
+                <div style={{ marginTop: 4, fontSize: 13, fontWeight: 700, color: '#10b981' }}>
+                  {previewPlan.ir.round_limit} Rounds Max
+                </div>
+              </div>
+            )}
 
             <div>
               <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
@@ -404,23 +456,140 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
                 ))}
               </div>
             </div>
-
-            <div>
-              <span style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>
-                Round 1 Scheduled Steps
-              </span>
-              <div style={{ marginTop: 4, fontSize: 14, fontWeight: 700, color: 'var(--text-main)' }}>
-                {previewPlan.workflow.total_steps} Operations (Priority Ordered)
-              </div>
-            </div>
           </div>
 
-          {/* Evidence Requirement DAG */}
-          <div style={{ marginBottom: 24 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', marginBottom: 10 }}>
-              Evidence Requirement Graph (DAG)
-            </h3>
-            <EvidenceGraphView graph={previewPlan.evidence_graph} />
+          {/* Split-Screen: Left: Lexer/Parser IR JSON Structure | Right: Evidence Requirement Graph (DAG) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(340px, 420px) 1fr', gap: 20, marginBottom: 24, alignItems: 'stretch' }}>
+            {/* Left Column: Compiler Intermediate Representation (IR) */}
+            <div className="glass-panel" style={{ padding: 18, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 480 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Layers size={16} color="var(--accent-blue)" />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)' }}>
+                    Compiler Intermediate Representation (IR)
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(previewPlan.ir || {}, null, 2));
+                    setCopiedIr(true);
+                    setTimeout(() => setCopiedIr(false), 2000);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    background: 'var(--bg-item)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 4,
+                    padding: '3px 8px',
+                    fontSize: 11,
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                  title="Copy IR JSON"
+                >
+                  {copiedIr ? <Check size={12} color="#10b981" /> : <Copy size={12} />}
+                  <span>{copiedIr ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+
+              {/* View Toggle Tabs */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <button
+                  onClick={() => setIrViewTab('ir')}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    borderRadius: 4,
+                    border: irViewTab === 'ir' ? '1px solid var(--accent-blue)' : '1px solid var(--border-subtle)',
+                    background: irViewTab === 'ir' ? 'rgba(56, 189, 248, 0.15)' : 'var(--bg-item)',
+                    color: irViewTab === 'ir' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <FileCode size={11} style={{ display: 'inline', marginRight: 4 }} />
+                  IR Structure
+                </button>
+                <button
+                  onClick={() => setIrViewTab('tokens')}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    borderRadius: 4,
+                    border: irViewTab === 'tokens' ? '1px solid var(--accent-blue)' : '1px solid var(--border-subtle)',
+                    background: irViewTab === 'tokens' ? 'rgba(56, 189, 248, 0.15)' : 'var(--bg-item)',
+                    color: irViewTab === 'tokens' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Lexer Tokens ({previewPlan.tokens?.length || 0})
+                </button>
+              </div>
+
+              {/* IR / Tokens Content Display */}
+              <div style={{
+                flex: 1,
+                background: 'var(--bg-code, #090d16)',
+                borderRadius: 8,
+                padding: 12,
+                border: '1px solid var(--border-subtle)',
+                overflowY: 'auto',
+                maxHeight: 520
+              }}>
+                {irViewTab === 'ir' ? (
+                  <pre style={{
+                    margin: 0,
+                    fontFamily: 'Fira Code, monospace',
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                    color: '#e2e8f0',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all'
+                  }}>
+                    {JSON.stringify(previewPlan.ir || { intent: previewPlan.intent, operations: previewPlan.initial_operations }, null, 2)}
+                  </pre>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {(previewPlan.tokens || []).map((tok, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, fontFamily: 'Fira Code, monospace', padding: '2px 6px', background: 'rgba(255,255,255,0.03)', borderRadius: 3 }}>
+                        <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{tok.type}</span>
+                        <span style={{ color: '#f1f5f9' }}>{JSON.stringify(tok.value)}</span>
+                        <span style={{ color: 'var(--text-dim)', fontSize: 10 }}>L{tok.line}:C{tok.column}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {previewPlan.ir?.options && Object.keys(previewPlan.ir.options).length > 0 && (
+                <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--bg-item)', borderRadius: 6, border: '1px solid var(--border-subtle)', fontSize: 11 }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Resolved Options:</span>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {Object.entries(previewPlan.ir.options).map(([k, v]) => (
+                      <span key={k} className="badge badge-neutral" style={{ fontSize: 10 }}>
+                        {k}: {String(v)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Evidence Requirement Graph (DAG) */}
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Evidence Requirement Graph (DAG)
+                </h3>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                  Interactive Nodes & Pre-execution Dependencies
+                </span>
+              </div>
+              <EvidenceGraphView graph={previewPlan.evidence_graph} />
+            </div>
           </div>
 
           {/* Planned Workflow Table */}

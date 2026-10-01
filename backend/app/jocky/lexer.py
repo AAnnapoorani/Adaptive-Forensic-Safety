@@ -11,6 +11,15 @@ class TokenType(Enum):
     KEYWORD_VERIFY = auto()
     KEYWORD_EXPORT = auto()
     KEYWORD_HASH = auto()
+    KEYWORD_TARGET = auto()
+    KEYWORD_ROUND_LIMIT = auto()
+    KEYWORD_OPTIONS = auto()
+    NUMBER = auto()
+    BOOLEAN = auto()
+    LBRACE = auto()
+    RBRACE = auto()
+    COLON = auto()
+    COMMA = auto()
     OPERATION = auto()
     IDENTIFIER = auto()
     STRING = auto()
@@ -58,7 +67,12 @@ KNOWN_KEYWORDS = {
     "SIGN",
     "VERIFY",
     "EXPORT",
-    "HASH"
+    "HASH",
+    "TARGET",
+    "ROUND_LIMIT",
+    "ROUNDS",
+    "MAX_ROUNDS",
+    "OPTIONS"
 }
 
 KEYWORD_MAP = {
@@ -70,6 +84,11 @@ KEYWORD_MAP = {
     "VERIFY": TokenType.KEYWORD_VERIFY,
     "EXPORT": TokenType.KEYWORD_EXPORT,
     "HASH": TokenType.KEYWORD_HASH,
+    "TARGET": TokenType.KEYWORD_TARGET,
+    "ROUND_LIMIT": TokenType.KEYWORD_ROUND_LIMIT,
+    "ROUNDS": TokenType.KEYWORD_ROUND_LIMIT,
+    "MAX_ROUNDS": TokenType.KEYWORD_ROUND_LIMIT,
+    "OPTIONS": TokenType.KEYWORD_OPTIONS,
 }
 
 class LexerError(Exception):
@@ -123,10 +142,13 @@ class Lexer:
                 tokens.append(Token(TokenType.NEWLINE, "\n", line, col))
                 continue
 
-            # Comment starting with '#'
-            if ch == "#":
+            # Comment starting with '#' or '//'
+            if ch == "#" or (ch == "/" and self._peek(1) == "/"):
                 line, col = self.line, self.column
                 comment_chars = []
+                if ch == "/":
+                    self._advance()
+                    self._advance()
                 while self._peek() and self._peek() != "\n":
                     comment_chars.append(self._advance())
                 tokens.append(Token(TokenType.COMMENT, "".join(comment_chars), line, col))
@@ -156,17 +178,53 @@ class Lexer:
                 tokens.append(Token(TokenType.STRING, "".join(str_chars), line, col))
                 continue
 
-            # Words: Keywords, Operations (e.g. PROCESS.LIST), or Identifiers
+            # Numbers: e.g. 3, 10, 0
+            if ch.isdigit():
+                line, col = self.line, self.column
+                num_chars = []
+                while self._peek() and (self._peek().isdigit() or self._peek() == "."):
+                    num_chars.append(self._advance())
+                tokens.append(Token(TokenType.NUMBER, "".join(num_chars), line, col))
+                continue
+
+            # Punctuation & Block Delimiters
+            if ch == "{":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.LBRACE, "{", line, col))
+                continue
+
+            if ch == "}":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.RBRACE, "}", line, col))
+                continue
+
+            if ch == ":":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.COLON, ":", line, col))
+                continue
+
+            if ch == ",":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.COMMA, ",", line, col))
+                continue
+
+            # Words: Keywords, Operations (e.g. PROCESS.LIST), Booleans, or Identifiers (including hyphens for machine IDs)
             if ch.isalpha() or ch == "_":
                 line, col = self.line, self.column
                 word_chars = []
-                while self._peek() and (self._peek().isalnum() or self._peek() in ("_", ".")):
+                while self._peek() and (self._peek().isalnum() or self._peek() in ("_", ".", "-")):
                     word_chars.append(self._advance())
                 
                 word = "".join(word_chars)
                 upper_word = word.upper()
 
-                if upper_word in KEYWORD_MAP:
+                if word.lower() in ("true", "false"):
+                    tokens.append(Token(TokenType.BOOLEAN, word.lower(), line, col))
+                elif upper_word in KEYWORD_MAP:
                     tokens.append(Token(KEYWORD_MAP[upper_word], upper_word, line, col))
                 elif upper_word in KNOWN_OPERATIONS:
                     tokens.append(Token(TokenType.OPERATION, upper_word, line, col))

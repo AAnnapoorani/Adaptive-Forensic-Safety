@@ -42,5 +42,17 @@ class ExportNode(ASTNode):
     target: str = "evidence"  # e.g., EXPORT evidence
 
 @dataclass
+class TargetNode(ASTNode):
+    target_id: str = ""
+
+@dataclass
+class RoundLimitNode(ASTNode):
+    limit: int = 3
+
+@dataclass
+class OptionsNode(ASTNode):
+    options: dict[str, Any] = field(default_factory=dict)
+
+@dataclass
 class ProgramNode(ASTNode):
     statements: list[ASTNode] = field(default_factory=list)
