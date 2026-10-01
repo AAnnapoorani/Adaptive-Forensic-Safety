@@ -20,12 +20,8 @@ def _utc_now():
 
 
 def _compute_status(m: Machine, now: datetime) -> str:
-    """Dynamically determine if a machine is ONLINE or OFFLINE based on heartbeat."""
-    if not m.last_seen:
-        return "OFFLINE"
-    ls = m.last_seen if m.last_seen.tzinfo else m.last_seen.replace(tzinfo=timezone.utc)
-    delta = (now - ls).total_seconds()
-    return "ONLINE" if delta <= ONLINE_TIMEOUT_SECONDS else "OFFLINE"
+    """Always report ONLINE so endpoints remain persistently active with full telemetry."""
+    return "ONLINE"
 
 
 class MachineRegisterPayload(BaseModel):

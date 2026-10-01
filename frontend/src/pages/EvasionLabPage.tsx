@@ -1679,6 +1679,8 @@ export const EvasionLabPage: React.FC = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {fleet.map(m => {
+            const savedMyId = localStorage.getItem('suvadu_my_machine_id');
+            const isMyDevice = (savedMyId && (m.id === savedMyId || m.machine_id === savedMyId)) || (!savedMyId && (m.hostname || '').toUpperCase().includes('GANESH'));
             const isSelected = (selectedMachineId === 'auto' && (m.status === 'ONLINE' || m.id === fleet[0]?.id)) || selectedMachineId === m.id || selectedMachineId === m.machine_id;
             return (
               <button
@@ -1691,16 +1693,22 @@ export const EvasionLabPage: React.FC = () => {
                   border: `1px solid ${isSelected ? '#38bdf8' : 'var(--border-subtle)'}`,
                   cursor: 'pointer', transition: 'all 0.15s'
                 }}
-                title="Select as active telemetry endpoint"
+                title={isMyDevice ? "Your Device (Full Telemetry)" : "Remote Endpoint (Name Only)"}
               >
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: m.status === 'ONLINE' ? '#10b981' : '#94a3b8' }} />
                 <strong style={{ color: isSelected ? '#38bdf8' : 'var(--text-main)' }}>{m.hostname}</strong>
-                <span style={{ color: 'var(--text-muted)' }}>({m.os_type})</span>
-                {m.latest_metrics && (
+                {isMyDevice ? (
                   <>
-                    <span style={{ color: '#38bdf8', fontWeight: 600 }}>CPU: {m.latest_metrics.cpu_percent}%</span>
-                    <span style={{ color: '#8b5cf6', fontWeight: 600 }}>RAM: {m.latest_metrics.memory_percent}%</span>
+                    <span style={{ color: 'var(--text-muted)' }}>({m.os_type})</span>
+                    {m.latest_metrics && (
+                      <>
+                        <span style={{ color: '#38bdf8', fontWeight: 600 }}>CPU: {m.latest_metrics.cpu_percent}%</span>
+                        <span style={{ color: '#8b5cf6', fontWeight: 600 }}>RAM: {m.latest_metrics.memory_percent}%</span>
+                      </>
+                    )}
                   </>
+                ) : (
+                  <span style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>· Name Only</span>
                 )}
               </button>
             );
