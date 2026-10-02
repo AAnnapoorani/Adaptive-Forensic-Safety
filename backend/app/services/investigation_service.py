@@ -1,23 +1,28 @@
 import json
 import uuid
-from datetime import datetime
+from typing import Any
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models.investigation import Investigation, InvestigationRound
 from app.models.workflow import WorkflowStep
-from app.models.evidence import EvidenceArtifact
+from app.models.evidence import ProvenanceRecord
 from app.models.execution import CorrelationMatch, EscalationAction, ExecutionLog
 from app.models.machine import Machine
-
 from app.jocky.compiler import JockyCompiler
 from app.intelligence.intent_engine import IntentEngine
-from app.intelligence.evidence_graph import build_evidence_graph_for_intent, EvidenceRequirementGraph
+from app.intelligence.evidence_graph import build_evidence_graph_for_intent
 from app.intelligence.workflow_planner import WorkflowCompiler
 from app.collectors.registry import get_collector
 from app.services.evidence_service import EvidenceService
 from app.intelligence.correlation_engine import CorrelationEngine
 from app.intelligence.escalation_rules import AdaptiveEscalationEngine
 from app.services.timeline_service import TimelineService
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
 
 class InvestigationService:
     @staticmethod
@@ -28,18 +33,67 @@ class InvestigationService:
         machine_id: str | None = None
     ) -> Investigation:
         """Create a new investigation record and initialize Round 1."""
-        # Find default machine if not supplied
+        # Find default machine or ensure one exists in DB to prevent foreign key errors
         if not machine_id:
             m = db.query(Machine).first()
-            machine_id = m.id if m else "MACHINE-LOCAL"
+            if not m:
+                from app.utils.platform import get_machine_info
+                local_info = get_machine_info()
+                m = Machine(
+                    id="MACHINE-LOCAL",
+                    hostname=local_info.get("hostname", "localhost"),
+                    ip_address="127.0.0.1",
+                    os=local_info.get("os_name", "Windows"),
+                    status="ONLINE"
+                )
+                db.add(m)
+                db.commit()
+                db.refresh(m)
+            machine_id = m.id
+        else:
+            # Ensure specified machine_id exists in machines table
+            m = db.query(Machine).filter((Machine.id == machine_id) | (Machine.hostname == machine_id)).first()
+            if not m:
+                m = Machine(
+                    id=machine_id,
+                    hostname=machine_id,
+                    ip_address="127.0.0.1",
+                    os="Windows",
+                    status="ONLINE"
+                )
+                db.add(m)
+                db.commit()
+                db.refresh(m)
+                machine_id = m.id
+            else:
+                machine_id = m.id
 
-        # Sequential ID
-        inv_count = db.query(Investigation).count()
-        inv_id = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{inv_count + 1:03d}"
+        # Guaranteed collision-free sequential ID for today
+        date_str = _utc_now().strftime('%Y%m%d')
+        existing_today = db.query(Investigation.id).filter(Investigation.id.like(f"INV-{date_str}-%")).all()
+        existing_nums = [0]
+        for (eid,) in existing_today:
+            try:
+                existing_nums.append(int(eid.split("-")[-1]))
+            except (ValueError, IndexError):
+                pass
+
+        # Also cross-check provenance records to avoid collision with any orphan logs
+        prov_today = db.query(ProvenanceRecord.investigation_id).filter(
+            ProvenanceRecord.investigation_id.like(f"INV-{date_str}-%")
+        ).distinct().all()
+        for (pid,) in prov_today:
+            try:
+                existing_nums.append(int(pid.split("-")[-1]))
+            except (ValueError, IndexError):
+                pass
+
+        next_seq = max(existing_nums) + 1
+        inv_id = f"INV-{date_str}-{next_seq:03d}"
 
         # If script provided, compile and parse intent
         parsed_intent = intent
-        total_rounds = 1
+        total_rounds = settings.MAX_ROUNDS
         if script and script.strip():
             ast_root, ir = JockyCompiler.compile(script)
             if ir.intent:
@@ -47,11 +101,19 @@ class InvestigationService:
             if ir.round_limit:
                 total_rounds = ir.round_limit
             if ir.target_id:
-                m = db.query(Machine).filter((Machine.id == ir.target_id) | (Machine.hostname == ir.target_id)).first()
-                if m:
-                    machine_id = m.id
-                else:
-                    machine_id = ir.target_id
+                m_target = db.query(Machine).filter((Machine.id == ir.target_id) | (Machine.hostname == ir.target_id)).first()
+                if not m_target:
+                    m_target = Machine(
+                        id=ir.target_id,
+                        hostname=ir.target_id,
+                        ip_address="127.0.0.1",
+                        os="Windows",
+                        status="ONLINE"
+                    )
+                    db.add(m_target)
+                    db.commit()
+                    db.refresh(m_target)
+                machine_id = m_target.id
             for ins in ir.instructions:
                 if ins.kind == "INVESTIGATION":
                     parsed_intent = ins.parameters.get("intent", parsed_intent)
@@ -65,7 +127,7 @@ class InvestigationService:
             status="CREATED",
             current_round=1,
             total_rounds=total_rounds,
-            start_time=datetime.utcnow()
+            start_time=_utc_now()
         )
         db.add(inv)
         db.commit()
@@ -193,7 +255,7 @@ class InvestigationService:
             round_record_id = f"RND-{inv.id}-{current_round:02d}"
             trigger_reason = (
                 "Initial investigation requirement" if current_round == 1
-                else f"Adaptive escalation triggered by rule evaluation"
+                else "Adaptive escalation triggered by rule evaluation"
             )
             round_obj = InvestigationRound(
                 id=round_record_id,
@@ -201,7 +263,7 @@ class InvestigationService:
                 round_number=current_round,
                 trigger_reason=trigger_reason,
                 status="EXECUTING",
-                started_at=datetime.utcnow()
+                started_at=_utc_now()
             )
             round_obj = db.merge(round_obj)
             db.commit()
@@ -223,7 +285,7 @@ class InvestigationService:
                     operation=planned_step.operation,
                     priority=planned_step.priority,
                     status="RUNNING",
-                    start_time=datetime.utcnow()
+                    start_time=_utc_now()
                 )
                 step_obj = db.merge(step_obj)
                 db.commit()
@@ -246,12 +308,12 @@ class InvestigationService:
                         data=data,
                         reason=planned_step.reason,
                         machine_id=inv.machine_id,
-                        step_id=step_obj.id,
+                        step_id=str(step_obj.id),
                         is_synthetic=True
                     )
 
                     step_obj.status = "COMPLETED"
-                    step_obj.end_time = datetime.utcnow()
+                    step_obj.end_time = _utc_now()
                     step_obj.result_summary = f"[DEMO] Collected {item_count} items. Artifact ID: {artifact.id}"
                     graph.update_node_status(f"node_{planned_step.operation.lower().replace('.', '_')}", "COLLECTED")
                 elif collector:
@@ -268,12 +330,12 @@ class InvestigationService:
                             data=res.data,
                             reason=planned_step.reason,
                             machine_id=inv.machine_id,
-                            step_id=step_obj.id,
+                            step_id=str(step_obj.id),
                             is_synthetic=False
                         )
 
                         step_obj.status = "COMPLETED"
-                        step_obj.end_time = datetime.utcnow()
+                        step_obj.end_time = _utc_now()
                         step_obj.result_summary = f"Collected {res.item_count} items. Artifact ID: {artifact.id}"
                         graph.update_node_status(f"node_{planned_step.operation.lower().replace('.', '_')}", "COLLECTED")
                     except Exception as e:
@@ -281,7 +343,7 @@ class InvestigationService:
                             "collector": planned_step.operation,
                             "status": "error",
                             "error": str(e),
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": _utc_now().isoformat(),
                             "partial": True
                         }
                         all_collected_evidence[planned_step.operation] = error_payload
@@ -295,19 +357,19 @@ class InvestigationService:
                                 data=error_payload,
                                 reason=f"Collector execution failure: {str(e)}",
                                 machine_id=inv.machine_id,
-                                step_id=step_obj.id,
+                                step_id=str(step_obj.id),
                                 is_synthetic=False
                             )
                         except Exception:
                             pass
                         step_obj.status = "FAILED"
-                        step_obj.end_time = datetime.utcnow()
+                        step_obj.end_time = _utc_now()
                         step_obj.error_message = str(e)
                         step_obj.result_summary = f"Error: {str(e)}"
                         graph.update_node_status(f"node_{planned_step.operation.lower().replace('.', '_')}", "FAILED")
                 else:
                     step_obj.status = "FAILED"
-                    step_obj.end_time = datetime.utcnow()
+                    step_obj.end_time = _utc_now()
                     step_obj.error_message = f"Collector {planned_step.operation} not found in registry"
 
 
@@ -316,7 +378,7 @@ class InvestigationService:
                 round_step_records.append(step_obj)
 
             round_obj.status = "COMPLETED"
-            round_obj.completed_at = datetime.utcnow()
+            round_obj.completed_at = _utc_now()
             db.commit()
             rounds_executed.append(current_round)
 
@@ -394,7 +456,7 @@ class InvestigationService:
 
         # 6. Finalize Investigation Status
         inv.status = "COMPLETED"
-        inv.end_time = datetime.utcnow()
+        inv.end_time = _utc_now()
         inv.total_rounds = len(rounds_executed)
         inv.summary = (
             f"Investigation finished with {len(rounds_executed)} rounds. "
