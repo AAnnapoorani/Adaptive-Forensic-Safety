@@ -13,8 +13,6 @@ from app.main import app, lifespan
 
 async def run_demo_mode_test():
     print("Testing Phase 14: Deterministic Demo Mode & Adaptive Multi-Round Escalation...")
-    from app.core.database import init_db
-    init_db()
     async with lifespan(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:

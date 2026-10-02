@@ -10,14 +10,11 @@ from app.jocky.ast import (
     SignNode,
     VerifyNode,
     ExportNode,
-    TargetNode,
-    RoundLimitNode,
-    OptionsNode,
 )
 
 @dataclass
 class IRInstruction:
-    kind: str  # INVESTIGATION, COLLECTION, SYNTHESIS, INTEGRITY, CONFIG
+    kind: str  # INVESTIGATION, COLLECTION, SYNTHESIS, INTEGRITY
     operation: str  # INVESTIGATE, PROCESS_LIST, CHAIN_BUILD, etc.
     parameters: dict[str, Any] = field(default_factory=dict)
     source_line: int = 1
@@ -32,9 +29,6 @@ class IRInstruction:
 class IntermediateRepresentation:
     intent: str | None = None
     case_id: str | None = None
-    target_id: str | None = None
-    round_limit: int | None = None
-    options: dict[str, Any] = field(default_factory=dict)
     operations: list[str] = field(default_factory=list)
     instructions: list[IRInstruction] = field(default_factory=list)
 
@@ -46,12 +40,6 @@ class IntermediateRepresentation:
             result["intent"] = self.intent
         if self.case_id is not None:
             result["case_id"] = self.case_id
-        if self.target_id is not None:
-            result["target_id"] = self.target_id
-        if self.round_limit is not None:
-            result["round_limit"] = self.round_limit
-        if self.options:
-            result["options"] = self.options
         if self.operations:
             result["operations"] = self.operations
         return result
@@ -63,9 +51,6 @@ def ast_to_ir(program: ProgramNode) -> IntermediateRepresentation:
     ir_instructions: list[IRInstruction] = []
     primary_intent: str | None = None
     case_id: str | None = None
-    target_id: str | None = None
-    round_limit: int | None = None
-    options: dict[str, Any] = {}
     resolved_operations: list[str] = []
 
     intent_engine = IntentEngine()
@@ -153,30 +138,6 @@ def ast_to_ir(program: ProgramNode) -> IntermediateRepresentation:
                 parameters=stmt.params,
                 source_line=stmt.line
             ))
-        elif isinstance(stmt, TargetNode):
-            target_id = stmt.target_id
-            ir_instructions.append(IRInstruction(
-                kind="CONFIG",
-                operation="SET_TARGET",
-                parameters={"target_id": stmt.target_id},
-                source_line=stmt.line
-            ))
-        elif isinstance(stmt, RoundLimitNode):
-            round_limit = stmt.limit
-            ir_instructions.append(IRInstruction(
-                kind="CONFIG",
-                operation="SET_ROUND_LIMIT",
-                parameters={"limit": stmt.limit},
-                source_line=stmt.line
-            ))
-        elif isinstance(stmt, OptionsNode):
-            options.update(stmt.options)
-            ir_instructions.append(IRInstruction(
-                kind="CONFIG",
-                operation="SET_OPTIONS",
-                parameters=stmt.options,
-                source_line=stmt.line
-            ))
 
     if not primary_intent and resolved_operations:
         primary_intent = "suspicious_network_activity"
@@ -184,9 +145,6 @@ def ast_to_ir(program: ProgramNode) -> IntermediateRepresentation:
     return IntermediateRepresentation(
         intent=primary_intent,
         case_id=case_id,
-        target_id=target_id,
-        round_limit=round_limit,
-        options=options,
         operations=resolved_operations,
         instructions=ir_instructions
     )

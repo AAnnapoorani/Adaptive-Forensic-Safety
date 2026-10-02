@@ -1,11 +1,6 @@
 import os
-import sys
 import shutil
 from pathlib import Path
-
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-
 from app.core.database import SessionLocal, init_db
 from app.core.config import settings
 from app.models import (
@@ -56,18 +51,6 @@ def reset_all():
             status="ACTIVE"
         )
         db.add(machine)
-
-        # Also register demo machine JOCKY-93358801DA45 from video guide
-        demo_machine = Machine(
-            id="JOCKY-93358801DA45",
-            hostname="JOCKY-93358801DA45",
-            os_name="Windows 11 Pro",
-            os_version="10.0.22631",
-            architecture="x86_64",
-            ip_address="192.168.1.42",
-            status="ACTIVE"
-        )
-        db.add(demo_machine)
         db.commit()
 
         print(f"Database rows cleared successfully:")

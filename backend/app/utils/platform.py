@@ -1,7 +1,7 @@
 import hashlib
 import platform
 import socket
-
+import uuid
 
 def get_machine_info() -> dict:
     """Retrieve local system details safely."""
@@ -23,14 +23,8 @@ def get_machine_info() -> dict:
         "id": machine_id,
         "hostname": hostname,
         "os_name": platform.system(),
-        "system": platform.system(),
         "os_version": platform.version() or platform.release(),
         "architecture": platform.machine(),
         "ip_address": ip_address,
         "status": "ACTIVE"
     }
-
-
-# Backward-compatible alias
-get_platform_info = get_machine_info
-
