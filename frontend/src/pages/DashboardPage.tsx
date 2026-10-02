@@ -41,11 +41,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
       // Automatically determine user's active device if not yet selected
       const savedMid = localStorage.getItem('suvadu_my_machine_id');
-      const validSaved = macData.find(m => m.id === savedMid || m.machine_id === savedMid);
+      const validSaved = macData.find(m => (m.id === savedMid || m.machine_id === savedMid) && !m.id.startsWith('MACHINE-'));
       if (validSaved) {
         setMyMachineId(validSaved.machine_id || validSaved.id);
       } else if (macData.length > 0) {
-        const preferred = macData.find(m => (m.hostname || '').toUpperCase().includes('GANESH')) || macData[0];
+        const preferred = macData.find(m => (m.id || '').startsWith('JOCKY-')) || macData[0];
         const chosen = preferred.machine_id || preferred.id;
         setMyMachineId(chosen);
         localStorage.setItem('suvadu_my_machine_id', chosen);
@@ -316,7 +316,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </thead>
               <tbody>
                 {machines.map(m => {
-                  const isMyDevice = (m.machine_id === myMachineId || m.id === myMachineId);
+                  const isMyDevice = (m.machine_id === myMachineId || m.id === myMachineId || machines.length === 1);
                   const { isOnline, text: lastSeenText } = getMachineLiveState(m);
                   const tick = Math.floor(currentTime / 1000);
                   const fallbackTelem = {
@@ -334,8 +334,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                   return (
                     <tr
                       key={m.id}
-                      style={{ cursor: isMyDevice ? 'pointer' : 'default', transition: 'background-color 0.15s ease' }}
-                      onClick={() => isMyDevice && onOpenMachine(m.machine_id || m.id)}
+                      style={{ cursor: 'pointer', transition: 'background-color 0.15s ease' }}
+                      onClick={() => onOpenMachine(m.machine_id || m.id)}
                     >
                       {/* Hostname & Stable Machine ID */}
                       <td>
@@ -477,19 +477,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: 6 }} onClick={e => e.stopPropagation()}>
-                          {isMyDevice ? (
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              onClick={() => onOpenMachine(m.machine_id || m.id)}
-                              style={{ fontSize: 11, padding: '4px 8px' }}
-                            >
-                              Inspect <ArrowRight size={11} />
-                            </button>
-                          ) : (
-                            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic', padding: '4px 8px' }}>
-                              Name Only
-                            </span>
-                          )}
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => onOpenMachine(m.machine_id || m.id)}
+                            style={{ fontSize: 11, padding: '4px 8px' }}
+                          >
+                            Inspect <ArrowRight size={11} />
+                          </button>
                         </div>
                       </td>
                     </tr>

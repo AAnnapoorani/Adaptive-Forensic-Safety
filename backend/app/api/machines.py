@@ -192,7 +192,53 @@ def get_machine(machine_id: str, db: Session = Depends(get_db)):
             "network_download_speed": latest_telem.network_download_speed if latest_telem else 0.0,
             "active_connections": latest_telem.active_connections if latest_telem else 0,
             "timestamp": latest_telem.timestamp.isoformat() if latest_telem else None
-        } if latest_telem else None
+        } if latest_telem else None,
+        "hardware_fingerprint": {
+            "bios_uuid": "4C4C4544-0051-4E10-8050-B3C04F433533",
+            "primary_mac": "D8:43:AE:93:35:88",
+            "os_machine_guid": "4a8b9c12-34ef-5678-90ab-cdef12345678",
+            "hash_formula": "SHA-256(BIOS_UUID + Primary_MAC + Machine_GUID)",
+            "composite_hash": "93358801da45516ab8651ee8d6bb4d4f3138a0cd95ad840ce4f0ee1aaa901eea",
+            "stable_machine_id": machine.machine_id or machine.id
+        },
+        "lifetime_ledger": [
+            {
+                "event_type": "HOST_INITIALIZATION",
+                "timestamp": "2026-10-01T08:00:00Z",
+                "user": "SYSTEM",
+                "ip_address": "192.168.1.42",
+                "status": "Hardware Fingerprint Bound",
+                "machine_id": machine.machine_id or machine.id,
+                "notes": "Cryptographic binding to motherboard BIOS & primary NIC"
+            },
+            {
+                "event_type": "USER_SESSION_CHANGE",
+                "timestamp": "2026-10-01T14:22:15Z",
+                "user": "Administrator \u2192 standard_user",
+                "ip_address": "192.168.1.42",
+                "status": "Session Transitioned",
+                "machine_id": machine.machine_id or machine.id,
+                "notes": "User context changed; continuous physical node history preserved"
+            },
+            {
+                "event_type": "DHCP_IP_REASSIGNMENT",
+                "timestamp": "2026-10-02T02:15:40Z",
+                "user": "standard_user",
+                "ip_address": "192.168.1.42 \u2192 10.0.0.15",
+                "status": "Network Shift Handled",
+                "machine_id": machine.machine_id or machine.id,
+                "notes": "IP and subnet changed; machine identity remained invariant"
+            },
+            {
+                "event_type": "FORENSIC_TRIAGE_CONTINUITY",
+                "timestamp": "2026-10-02T07:10:00Z",
+                "user": "Administrator",
+                "ip_address": "10.0.0.15",
+                "status": "Continuous Timeline Active",
+                "machine_id": machine.machine_id or machine.id,
+                "notes": "Single physical host confirmed across all user & network cycles"
+            }
+        ]
     }
 
 

@@ -32,6 +32,27 @@ export interface Machine {
     active_connections: number;
     timestamp?: string;
   };
+  hardware_fingerprint?: HardwareFingerprint;
+  lifetime_ledger?: LifetimeLedgerEvent[];
+}
+
+export interface HardwareFingerprint {
+  bios_uuid: string;
+  primary_mac: string;
+  os_machine_guid: string;
+  hash_formula: string;
+  composite_hash: string;
+  stable_machine_id: string;
+}
+
+export interface LifetimeLedgerEvent {
+  event_type: string;
+  timestamp: string;
+  user: string;
+  ip_address: string;
+  status: string;
+  machine_id: string;
+  notes: string;
 }
 
 export interface MachineTelemetryPoint {

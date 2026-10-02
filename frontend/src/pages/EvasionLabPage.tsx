@@ -1682,7 +1682,7 @@ export const EvasionLabPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {fleet.map(m => {
             const savedMyId = localStorage.getItem('suvadu_my_machine_id');
-            const isMyDevice = (savedMyId && (m.id === savedMyId || m.machine_id === savedMyId)) || (!savedMyId && (m.hostname || '').toUpperCase().includes('GANESH'));
+            const isMyDevice = (savedMyId && (m.id === savedMyId || m.machine_id === savedMyId)) || (!savedMyId && (m.hostname || '').toUpperCase().includes('GANESH')) || fleet.length === 1;
             const isSelected = (selectedMachineId === 'auto' && (m.status === 'ONLINE' || m.id === fleet[0]?.id)) || selectedMachineId === m.id || selectedMachineId === m.machine_id;
             return (
               <button

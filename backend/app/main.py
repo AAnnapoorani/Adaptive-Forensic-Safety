@@ -11,6 +11,7 @@ from app.api import websocket as ws_router
 from app.api import telemetry
 
 from app.services.retention import start_retention_loop
+from app.services.live_telemetry import start_live_telemetry_loop
 import asyncio
 
 @asynccontextmanager
@@ -29,15 +30,17 @@ async def lifespan(app: FastAPI):
             else:
                 print("[DB] Warning: Continuing startup without synchronous table initialization.")
 
-    # Start Free-Tier Retention Guardian background task
+    # Start Free-Tier Retention Guardian and In-Process Live Telemetry
     retention_task = asyncio.create_task(start_retention_loop())
+    telemetry_task = asyncio.create_task(start_live_telemetry_loop())
 
     yield
     # Clean shutdown
     retention_task.cancel()
+    telemetry_task.cancel()
     try:
-        await retention_task
-    except asyncio.CancelledError:
+        await asyncio.gather(retention_task, telemetry_task, return_exceptions=True)
+    except Exception:
         pass
 
 app = FastAPI(

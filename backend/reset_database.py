@@ -43,12 +43,15 @@ def reset_all():
         info = get_machine_info()
         machine = Machine(
             id=info["id"],
+            machine_id=info["id"],
             hostname=info["hostname"],
+            os_type=info.get("os_type", "Windows"),
             os_name=info["os_name"],
             os_version=info["os_version"],
             architecture=info["architecture"],
             ip_address=info["ip_address"],
-            status="ACTIVE"
+            mac_address=info.get("mac_address"),
+            status="ONLINE"
         )
         db.add(machine)
         db.commit()
