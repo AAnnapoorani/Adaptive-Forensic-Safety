@@ -3,6 +3,9 @@ from typing import Any
 from app.jocky.ast import (
     ProgramNode,
     InvestigateNode,
+    TargetNode,
+    RoundLimitNode,
+    OptionsNode,
     OperationNode,
     FileHashNode,
     CaseNode,
@@ -14,13 +17,13 @@ from app.jocky.ast import (
 
 @dataclass
 class IRInstruction:
-    kind: str  # INVESTIGATION, COLLECTION, SYNTHESIS, INTEGRITY
+    kind: str  # INVESTIGATION, COLLECTION, SYNTHESIS, INTEGRITY, CONFIG
     operation: str  # INVESTIGATE, PROCESS_LIST, CHAIN_BUILD, etc.
     parameters: dict[str, Any] = field(default_factory=dict)
     source_line: int = 1
 
     def to_dict(self) -> dict[str, Any]:
-        d = {"kind": self.kind, "operation": self.operation}
+        d: dict[str, Any] = {"kind": self.kind, "operation": self.operation}
         if self.parameters:
             d["parameters"] = self.parameters
         return d
@@ -28,6 +31,9 @@ class IRInstruction:
 @dataclass
 class IntermediateRepresentation:
     intent: str | None = None
+    target: str | None = None
+    round_limit: int | None = None
+    options: dict[str, Any] = field(default_factory=dict)
     case_id: str | None = None
     operations: list[str] = field(default_factory=list)
     instructions: list[IRInstruction] = field(default_factory=list)
@@ -38,6 +44,12 @@ class IntermediateRepresentation:
         }
         if self.intent is not None:
             result["intent"] = self.intent
+        if self.target is not None:
+            result["target"] = self.target
+        if self.round_limit is not None:
+            result["round_limit"] = self.round_limit
+        if self.options:
+            result["options"] = self.options
         if self.case_id is not None:
             result["case_id"] = self.case_id
         if self.operations:
@@ -50,6 +62,9 @@ def ast_to_ir(program: ProgramNode) -> IntermediateRepresentation:
 
     ir_instructions: list[IRInstruction] = []
     primary_intent: str | None = None
+    target_machine: str | None = None
+    round_limit: int | None = None
+    collected_options: dict[str, Any] = {}
     case_id: str | None = None
     resolved_operations: list[str] = []
 
@@ -67,6 +82,30 @@ def ast_to_ir(program: ProgramNode) -> IntermediateRepresentation:
                 kind="INVESTIGATION",
                 operation="INVESTIGATE",
                 parameters={"intent": stmt.intent},
+                source_line=stmt.line
+            ))
+        elif isinstance(stmt, TargetNode):
+            target_machine = stmt.target
+            ir_instructions.append(IRInstruction(
+                kind="CONFIG",
+                operation="TARGET_ENDPOINT",
+                parameters={"target": stmt.target},
+                source_line=stmt.line
+            ))
+        elif isinstance(stmt, RoundLimitNode):
+            round_limit = stmt.limit
+            ir_instructions.append(IRInstruction(
+                kind="CONFIG",
+                operation="SET_ROUND_LIMIT",
+                parameters={"round_limit": stmt.limit},
+                source_line=stmt.line
+            ))
+        elif isinstance(stmt, OptionsNode):
+            collected_options.update(stmt.options)
+            ir_instructions.append(IRInstruction(
+                kind="CONFIG",
+                operation="SET_OPTIONS",
+                parameters=stmt.options,
                 source_line=stmt.line
             ))
         elif isinstance(stmt, CaseNode):
@@ -144,6 +183,9 @@ def ast_to_ir(program: ProgramNode) -> IntermediateRepresentation:
 
     return IntermediateRepresentation(
         intent=primary_intent,
+        target=target_machine,
+        round_limit=round_limit,
+        options=collected_options,
         case_id=case_id,
         operations=resolved_operations,
         instructions=ir_instructions

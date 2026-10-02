@@ -1,7 +1,12 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any
 from sqlalchemy.orm import Session
+
+def _utc_now():
+    return datetime.now(timezone.utc)
+
 from app.core.config import settings
 from app.models.investigation import Investigation, InvestigationRound
 from app.models.workflow import WorkflowStep
@@ -35,14 +40,24 @@ class InvestigationService:
 
         # Sequential ID
         inv_count = db.query(Investigation).count()
-        inv_id = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{inv_count + 1:03d}"
+        inv_id = f"INV-{_utc_now().strftime('%Y%m%d')}-{inv_count + 1:03d}"
 
-        # If script provided, compile and parse intent
+        # If script provided, compile and parse intent, target, and round limit
         parsed_intent = intent
+        total_rounds = 1
         if script and script.strip():
             ast_root, ir = JockyCompiler.compile(script)
             if ir.intent:
                 parsed_intent = ir.intent
+            if ir.target:
+                target_m = db.query(Machine).filter((Machine.id == ir.target) | (Machine.machine_id == ir.target)).first()
+                if target_m:
+                    machine_id = target_m.id
+                else:
+                    machine_id = ir.target
+            if ir.round_limit:
+                total_rounds = ir.round_limit
+
             for ins in ir.instructions:
                 if ins.kind == "INVESTIGATION":
                     parsed_intent = ins.parameters.get("intent", parsed_intent)
@@ -55,8 +70,8 @@ class InvestigationService:
             machine_id=machine_id,
             status="CREATED",
             current_round=1,
-            total_rounds=1,
-            start_time=datetime.utcnow()
+            total_rounds=total_rounds,
+            start_time=_utc_now()
         )
         db.add(inv)
         db.commit()
@@ -191,7 +206,7 @@ class InvestigationService:
                 round_number=current_round,
                 trigger_reason=trigger_reason,
                 status="EXECUTING",
-                started_at=datetime.utcnow()
+                started_at=_utc_now()
             )
             round_obj = db.merge(round_obj)
             db.commit()
@@ -213,7 +228,7 @@ class InvestigationService:
                     operation=planned_step.operation,
                     priority=planned_step.priority,
                     status="RUNNING",
-                    start_time=datetime.utcnow()
+                    start_time=_utc_now()
                 )
                 step_obj = db.merge(step_obj)
                 db.commit()
@@ -241,7 +256,7 @@ class InvestigationService:
                     )
 
                     step_obj.status = "COMPLETED"
-                    step_obj.end_time = datetime.utcnow()
+                    step_obj.end_time = _utc_now()
                     step_obj.result_summary = f"[DEMO] Collected {item_count} items. Artifact ID: {artifact.id}"
                     graph.update_node_status(f"node_{planned_step.operation.lower().replace('.', '_')}", "COLLECTED")
                 elif collector:
@@ -263,7 +278,7 @@ class InvestigationService:
                         )
 
                         step_obj.status = "COMPLETED"
-                        step_obj.end_time = datetime.utcnow()
+                        step_obj.end_time = _utc_now()
                         step_obj.result_summary = f"Collected {res.item_count} items. Artifact ID: {artifact.id}"
                         graph.update_node_status(f"node_{planned_step.operation.lower().replace('.', '_')}", "COLLECTED")
                     except Exception as e:
@@ -271,7 +286,7 @@ class InvestigationService:
                             "collector": planned_step.operation,
                             "status": "error",
                             "error": str(e),
-                            "timestamp": datetime.utcnow().isoformat(),
+                            "timestamp": _utc_now().isoformat(),
                             "partial": True
                         }
                         all_collected_evidence[planned_step.operation] = error_payload
@@ -291,13 +306,13 @@ class InvestigationService:
                         except Exception:
                             pass
                         step_obj.status = "FAILED"
-                        step_obj.end_time = datetime.utcnow()
+                        step_obj.end_time = _utc_now()
                         step_obj.error_message = str(e)
                         step_obj.result_summary = f"Error: {str(e)}"
                         graph.update_node_status(f"node_{planned_step.operation.lower().replace('.', '_')}", "FAILED")
                 else:
                     step_obj.status = "FAILED"
-                    step_obj.end_time = datetime.utcnow()
+                    step_obj.end_time = _utc_now()
                     step_obj.error_message = f"Collector {planned_step.operation} not found in registry"
 
 
@@ -306,7 +321,7 @@ class InvestigationService:
                 round_step_records.append(step_obj)
 
             round_obj.status = "COMPLETED"
-            round_obj.completed_at = datetime.utcnow()
+            round_obj.completed_at = _utc_now()
             db.commit()
             rounds_executed.append(current_round)
 
@@ -384,7 +399,7 @@ class InvestigationService:
 
         # 6. Finalize Investigation Status
         inv.status = "COMPLETED"
-        inv.end_time = datetime.utcnow()
+        inv.end_time = _utc_now()
         inv.total_rounds = len(rounds_executed)
         inv.summary = (
             f"Investigation finished with {len(rounds_executed)} rounds. "

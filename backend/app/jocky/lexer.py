@@ -4,6 +4,9 @@ from dataclasses import dataclass
 
 class TokenType(Enum):
     KEYWORD_INVESTIGATE = auto()
+    KEYWORD_TARGET = auto()
+    KEYWORD_ROUND_LIMIT = auto()
+    KEYWORD_OPTIONS = auto()
     KEYWORD_CASE = auto()
     KEYWORD_COLLECT = auto()
     KEYWORD_CHAIN = auto()
@@ -14,6 +17,12 @@ class TokenType(Enum):
     OPERATION = auto()
     IDENTIFIER = auto()
     STRING = auto()
+    NUMBER = auto()
+    BOOLEAN = auto()
+    LBRACE = auto()
+    RBRACE = auto()
+    COLON = auto()
+    COMMA = auto()
     COMMENT = auto()
     NEWLINE = auto()
     EOF = auto()
@@ -52,6 +61,9 @@ KNOWN_OPERATIONS = {
 
 KNOWN_KEYWORDS = {
     "INVESTIGATE",
+    "TARGET",
+    "ROUND_LIMIT",
+    "OPTIONS",
     "CASE",
     "COLLECT",
     "CHAIN",
@@ -63,6 +75,9 @@ KNOWN_KEYWORDS = {
 
 KEYWORD_MAP = {
     "INVESTIGATE": TokenType.KEYWORD_INVESTIGATE,
+    "TARGET": TokenType.KEYWORD_TARGET,
+    "ROUND_LIMIT": TokenType.KEYWORD_ROUND_LIMIT,
+    "OPTIONS": TokenType.KEYWORD_OPTIONS,
     "CASE": TokenType.KEYWORD_CASE,
     "COLLECT": TokenType.KEYWORD_COLLECT,
     "CHAIN": TokenType.KEYWORD_CHAIN,
@@ -132,6 +147,37 @@ class Lexer:
                 tokens.append(Token(TokenType.COMMENT, "".join(comment_chars), line, col))
                 continue
 
+            # Delimiters and Symbols
+            if ch == "{":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.LBRACE, "{", line, col))
+                continue
+            if ch == "}":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.RBRACE, "}", line, col))
+                continue
+            if ch == ":":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.COLON, ":", line, col))
+                continue
+            if ch == ",":
+                line, col = self.line, self.column
+                self._advance()
+                tokens.append(Token(TokenType.COMMA, ",", line, col))
+                continue
+
+            # Numbers (integers or decimals)
+            if ch.isdigit():
+                line, col = self.line, self.column
+                num_chars = []
+                while self._peek() and (self._peek().isdigit() or self._peek() == "."):
+                    num_chars.append(self._advance())
+                tokens.append(Token(TokenType.NUMBER, "".join(num_chars), line, col))
+                continue
+
             # Quoted String "..."
             if ch in ('"', "'"):
                 quote_char = ch
@@ -156,7 +202,7 @@ class Lexer:
                 tokens.append(Token(TokenType.STRING, "".join(str_chars), line, col))
                 continue
 
-            # Words: Keywords, Operations (e.g. PROCESS.LIST), or Identifiers
+            # Words: Keywords, Operations, Booleans, or Identifiers
             if ch.isalpha() or ch == "_":
                 line, col = self.line, self.column
                 word_chars = []
@@ -166,7 +212,9 @@ class Lexer:
                 word = "".join(word_chars)
                 upper_word = word.upper()
 
-                if upper_word in KEYWORD_MAP:
+                if upper_word in ("TRUE", "FALSE"):
+                    tokens.append(Token(TokenType.BOOLEAN, word.lower(), line, col))
+                elif upper_word in KEYWORD_MAP:
                     tokens.append(Token(KEYWORD_MAP[upper_word], upper_word, line, col))
                 elif upper_word in KNOWN_OPERATIONS:
                     tokens.append(Token(TokenType.OPERATION, upper_word, line, col))

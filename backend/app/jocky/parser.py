@@ -2,6 +2,9 @@ from app.jocky.lexer import Token, TokenType
 from app.jocky.ast import (
     ProgramNode,
     InvestigateNode,
+    TargetNode,
+    RoundLimitNode,
+    OptionsNode,
     OperationNode,
     FileHashNode,
     CaseNode,
@@ -119,6 +122,111 @@ class Parser:
                     intent=intent_tok.value,
                     line=inv_tok.line,
                     column=inv_tok.column
+                ))
+
+            # TARGET "<machine_id>" or TARGET <identifier>
+            elif tok.type == TokenType.KEYWORD_TARGET:
+                target_keyword = self._advance()
+                if self._peek().type not in (TokenType.STRING, TokenType.IDENTIFIER):
+                    raise ParserError(
+                        "Expected target identifier or string after TARGET, e.g. TARGET \"JOCKY-93358801DA45\"",
+                        self._peek().line, self._peek().column
+                    )
+                target_val = self._advance().value
+                statements.append(TargetNode(
+                    target=target_val,
+                    line=target_keyword.line,
+                    column=target_keyword.column
+                ))
+
+            # ROUND_LIMIT <number>
+            elif tok.type == TokenType.KEYWORD_ROUND_LIMIT:
+                limit_keyword = self._advance()
+                if self._peek().type != TokenType.NUMBER:
+                    raise ParserError(
+                        "Expected numeric limit after ROUND_LIMIT, e.g. ROUND_LIMIT 3",
+                        self._peek().line, self._peek().column
+                    )
+                num_tok = self._advance()
+                statements.append(RoundLimitNode(
+                    limit=int(float(num_tok.value)),
+                    line=limit_keyword.line,
+                    column=limit_keyword.column
+                ))
+
+            # OPTIONS { <key>: <value>, ... }
+            elif tok.type == TokenType.KEYWORD_OPTIONS:
+                opt_keyword = self._advance()
+                while self._peek().type == TokenType.NEWLINE:
+                    self._advance()
+                if self._peek().type != TokenType.LBRACE:
+                    raise ParserError(
+                        "Expected '{' after OPTIONS, e.g. OPTIONS { stealth_mode: true }",
+                        self._peek().line, self._peek().column
+                    )
+                self._advance()  # consume {
+
+                options_dict: dict = {}
+                while self._peek().type not in (TokenType.RBRACE, TokenType.EOF):
+                    if self._peek().type == TokenType.NEWLINE:
+                        self._advance()
+                        continue
+                    if self._peek().type == TokenType.COMMA:
+                        self._advance()
+                        continue
+                    if self._peek().type == TokenType.RBRACE:
+                        break
+
+                    key_tok = self._peek()
+                    if key_tok.type not in (TokenType.IDENTIFIER, TokenType.STRING):
+                        raise ParserError(
+                            f"Expected option key inside OPTIONS block, found {key_tok.type.name} ('{key_tok.value}')",
+                            key_tok.line, key_tok.column
+                        )
+                    key = self._advance().value
+
+                    # Expect colon
+                    while self._peek().type == TokenType.NEWLINE:
+                        self._advance()
+                    if self._peek().type != TokenType.COLON:
+                        raise ParserError(
+                            f"Expected ':' after option key '{key}'",
+                            self._peek().line, self._peek().column
+                        )
+                    self._advance()  # consume :
+
+                    while self._peek().type == TokenType.NEWLINE:
+                        self._advance()
+
+                    val_tok = self._peek()
+                    if val_tok.type == TokenType.BOOLEAN:
+                        val = (self._advance().value.lower() == "true")
+                    elif val_tok.type == TokenType.NUMBER:
+                        num_s = self._advance().value
+                        val = float(num_s) if "." in num_s else int(num_s)
+                    elif val_tok.type in (TokenType.STRING, TokenType.IDENTIFIER):
+                        val = self._advance().value
+                    else:
+                        raise ParserError(
+                            f"Expected option value after ':', found {val_tok.type.name} ('{val_tok.value}')",
+                            val_tok.line, val_tok.column
+                        )
+                    options_dict[key] = val
+
+                    # Skip optional comma or newlines
+                    if self._peek().type == TokenType.COMMA:
+                        self._advance()
+                    while self._peek().type == TokenType.NEWLINE:
+                        self._advance()
+
+                if self._peek().type != TokenType.RBRACE:
+                    raise ParserError("Unclosed OPTIONS block, expected '}'", self._peek().line, self._peek().column)
+                self._advance()  # consume }
+
+                statements.append(OptionsNode(
+                    options=options_dict,
+                    line=opt_keyword.line,
+                    column=opt_keyword.column
                 ))
 
             # 2. CASE "<case_id>" or CASE <identifier>

@@ -23,6 +23,18 @@ class OperationNode(ASTNode):
 class FileHashNode(ASTNode):
     path: str = ""
 
+@dataclass
+class TargetNode(ASTNode):
+    target: str = ""
+
+@dataclass
+class RoundLimitNode(ASTNode):
+    limit: int = 3
+
+@dataclass
+class OptionsNode(ASTNode):
+    options: dict[str, Any] = field(default_factory=dict)
+
 # ── Integrity 2.0 AST Nodes ──────────────────────────────────────────────────
 
 @dataclass
