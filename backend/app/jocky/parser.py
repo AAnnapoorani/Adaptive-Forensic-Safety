@@ -9,9 +9,6 @@ from app.jocky.ast import (
     SignNode,
     VerifyNode,
     ExportNode,
-    TargetNode,
-    RoundLimitNode,
-    OptionsNode,
     ASTNode,
 )
 
@@ -240,86 +237,6 @@ class Parser:
                     operation=op_tok.value,
                     line=op_tok.line,
                     column=op_tok.column
-                ))
-
-            # 11. TARGET "<target_id>" or TARGET <target_id>
-            elif tok.type == TokenType.KEYWORD_TARGET:
-                tgt_tok = self._advance()
-                if self._peek().type not in (TokenType.STRING, TokenType.IDENTIFIER):
-                    raise ParserError(
-                        "Expected target identifier or quoted string after TARGET, e.g. TARGET \"JOCKY-93358801DA45\"",
-                        self._peek().line, self._peek().column
-                    )
-                val_tok = self._advance()
-                statements.append(TargetNode(
-                    target_id=val_tok.value,
-                    line=tgt_tok.line,
-                    column=tgt_tok.column
-                ))
-
-            # 12. ROUND_LIMIT <number>
-            elif tok.type == TokenType.KEYWORD_ROUND_LIMIT:
-                rl_tok = self._advance()
-                if self._peek().type != TokenType.NUMBER:
-                    raise ParserError(
-                        "Expected number after ROUND_LIMIT, e.g. ROUND_LIMIT 3",
-                        self._peek().line, self._peek().column
-                    )
-                val_tok = self._advance()
-                statements.append(RoundLimitNode(
-                    limit=int(float(val_tok.value)),
-                    line=rl_tok.line,
-                    column=rl_tok.column
-                ))
-
-            # 13. OPTIONS { <key>: <val>, ... }
-            elif tok.type == TokenType.KEYWORD_OPTIONS:
-                opt_tok = self._advance()
-                while self._peek().type == TokenType.NEWLINE:
-                    self._advance()
-                self._match(TokenType.LBRACE)
-                opts = {}
-                while self._peek().type != TokenType.RBRACE and self._peek().type != TokenType.EOF:
-                    if self._peek().type == TokenType.NEWLINE:
-                        self._advance()
-                        continue
-                    key_tok = self._peek()
-                    if key_tok.type not in (TokenType.IDENTIFIER, TokenType.STRING):
-                        raise ParserError(
-                            f"Expected option key name in OPTIONS block, found {key_tok.type.name}",
-                            key_tok.line, key_tok.column
-                        )
-                    self._advance()
-                    key = key_tok.value
-                    while self._peek().type == TokenType.NEWLINE:
-                        self._advance()
-                    self._match(TokenType.COLON)
-                    while self._peek().type == TokenType.NEWLINE:
-                        self._advance()
-                    val_tok = self._peek()
-                    if val_tok.type == TokenType.BOOLEAN:
-                        self._advance()
-                        opts[key] = (val_tok.value == "true")
-                    elif val_tok.type == TokenType.NUMBER:
-                        self._advance()
-                        opts[key] = float(val_tok.value) if "." in val_tok.value else int(val_tok.value)
-                    elif val_tok.type in (TokenType.STRING, TokenType.IDENTIFIER):
-                        self._advance()
-                        opts[key] = val_tok.value
-                    else:
-                        raise ParserError(
-                            f"Unexpected value type {val_tok.type.name} for option '{key}'",
-                            val_tok.line, val_tok.column
-                        )
-                    if self._peek().type == TokenType.COMMA:
-                        self._advance()
-                    while self._peek().type == TokenType.NEWLINE:
-                        self._advance()
-                self._match(TokenType.RBRACE)
-                statements.append(OptionsNode(
-                    options=opts,
-                    line=opt_tok.line,
-                    column=opt_tok.column
                 ))
 
             else:

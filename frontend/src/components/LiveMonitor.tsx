@@ -152,8 +152,6 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
   const evsTimer = useRef<any>(null);
   const pollTimer = useRef<any>(null);
   const logRef = useRef<HTMLDivElement>(null);
-  const connectSystemRef = useRef<() => void>(() => {});
-  const connectEvasionRef = useRef<() => void>(() => {});
 
   const pushEvent = useCallback((ev: Omit<LiveEvent, 'id'>) => {
     setEvents(prev => {
@@ -405,9 +403,7 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       setConnected(false);
       if (!isMounted.current) return;
       if (sysTimer.current) clearTimeout(sysTimer.current);
-      sysTimer.current = setTimeout(() => {
-        connectSystemRef.current();
-      }, 5000);
+      sysTimer.current = setTimeout(connectSystem, 5000);
     };
 
     sysWs.current = ws;
@@ -474,17 +470,13 @@ export const LiveMonitor: React.FC<LiveMonitorProps> = ({
       setEvasionConnected(false);
       if (!isMounted.current) return;
       if (evsTimer.current) clearTimeout(evsTimer.current);
-      evsTimer.current = setTimeout(() => {
-        connectEvasionRef.current();
-      }, 5000);
+      evsTimer.current = setTimeout(connectEvasion, 5000);
     };
 
     evsWs.current = ws;
   }, [pushEvent]);
 
   useEffect(() => {
-    connectSystemRef.current = connectSystem;
-    connectEvasionRef.current = connectEvasion;
     isMounted.current = true;
     connectSystem();
     connectEvasion();
