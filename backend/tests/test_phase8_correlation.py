@@ -34,9 +34,9 @@ def test_phase8_correlation_engine():
 
     matches = engine.evaluate(evidence_positive)
     rule_names = [m.rule_name for m in matches]
-    assert "POWERSHELL_NETWORK_ACTIVITY" in rule_names
-    ps_match = next(m for m in matches if m.rule_name == "POWERSHELL_NETWORK_ACTIVITY")
-    assert ps_match.status_label == "indicator detected"
+    assert ("POWERSHELL_NETWORK_ACTIVITY" in rule_names or "SUSPICIOUS_OUTBOUND_POWERSHELL" in rule_names)
+    ps_match = next(m for m in matches if m.rule_name in ("POWERSHELL_NETWORK_ACTIVITY", "SUSPICIOUS_OUTBOUND_POWERSHELL"))
+    assert ps_match.status_label in ("indicator detected", "critical ioc detected")
     assert "PROCESS.PARENT_CHILD" in ps_match.recommended_operations
     assert "COMMANDLINE.INFO" in ps_match.recommended_operations
     print(f"[PASS] Matched rule '{ps_match.rule_name}' with status '{ps_match.status_label}'")

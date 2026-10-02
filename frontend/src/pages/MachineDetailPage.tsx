@@ -62,7 +62,43 @@ export const MachineDetailPage: React.FC<MachineDetailPageProps> = ({
   const [processes, setProcesses] = useState<MachineProcess[]>([]);
   const [events, setEvents] = useState<ForensicEventItem[]>([]);
   const [commands, setCommands] = useState<AgentTriageCommandItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'processes' | 'shell' | 'events' | 'ledger' | 'metrics'>('processes');
+  const getMachineTabFromUrl = (): 'processes' | 'shell' | 'events' | 'ledger' | 'metrics' => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get('tab')?.toLowerCase();
+      if (tabParam === 'shell' || tabParam === 'events' || tabParam === 'ledger' || tabParam === 'metrics') {
+        return tabParam;
+      }
+    } catch {
+      // Fallback
+    }
+    return 'processes';
+  };
+
+  const [activeTab, setActiveTabState] = useState<'processes' | 'shell' | 'events' | 'ledger' | 'metrics'>(getMachineTabFromUrl);
+
+  const setActiveTab = (tab: 'processes' | 'shell' | 'events' | 'ledger' | 'metrics') => {
+    setActiveTabState(tab);
+    try {
+      const url = new URL(window.location.href);
+      if (tab === 'processes') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', tab);
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // Silently ignore
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveTabState(getMachineTabFromUrl());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [processSearch, setProcessSearch] = useState('');
   const [threatFilterOnly, setThreatFilterOnly] = useState(false);
   const [selectedThreatProc, setSelectedThreatProc] = useState<MachineProcess | null>(null);

@@ -24,7 +24,6 @@ import {
   GitBranch,
   ListOrdered,
   FileJson,
-  AlertTriangle,
   Clock,
   ShieldCheck,
   FileText,
@@ -35,7 +34,8 @@ import {
   Loader2,
   CheckCircle2,
   Activity,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 
 interface InvestigationDetailPageProps {
@@ -55,7 +55,80 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [planData, setPlanData] = useState<any>(null);
 
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  const VALID_TABS = [
+    'overview',
+    'graph',
+    'workflow',
+    'evidence',
+    'correlations',
+    'timeline',
+    'provenance',
+    'ai-analyst',
+    'report'
+  ];
+
+  const getTabFromUrl = (): string => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get('tab')?.toLowerCase();
+      if (!tabParam) return 'overview';
+      if (tabParam === 'artifacts') return 'evidence';
+      if (tabParam === 'indicators') return 'correlations';
+      if (tabParam === 'ai' || tabParam === 'aianalyst') return 'ai-analyst';
+      if (tabParam === 'chain' || tabParam === 'ledger') return 'provenance';
+      if (VALID_TABS.includes(tabParam)) return tabParam;
+    } catch {
+      // Fallback in case of parse error
+    }
+    return 'overview';
+  };
+
+  const [activeTab, setActiveTabState] = useState<string>(getTabFromUrl);
+
+  const [showAiDrawer, setShowAiDrawer] = useState<boolean>(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tabParam = searchParams.get('tab')?.toLowerCase();
+      return tabParam === 'ai' || tabParam === 'ai-analyst' || tabParam === 'aianalyst';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showAiDrawer) {
+        setShowAiDrawer(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAiDrawer]);
+
+  const setActiveTab = (tab: string) => {
+    setActiveTabState(tab);
+    try {
+      const url = new URL(window.location.href);
+      if (tab === 'overview') {
+        url.searchParams.delete('tab');
+      } else {
+        url.searchParams.set('tab', tab);
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // Silently ignore URL update error in restricted envs
+    }
+  };
+
+  // Sync tab state when user navigates using browser Back/Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      setActiveTabState(getTabFromUrl());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date>(new Date());
@@ -283,6 +356,24 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
 
             <button
               className="btn btn-secondary btn-sm"
+              onClick={() => setShowAiDrawer(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(147, 51, 234, 0.14))',
+                border: '1px solid rgba(147, 51, 234, 0.45)',
+                color: 'var(--text-main)',
+                fontWeight: 600,
+                boxShadow: '0 2px 8px rgba(147, 51, 234, 0.12)'
+              }}
+            >
+              <Sparkles size={14} color="#a855f7" />
+              AI Analyst
+            </button>
+
+            <button
+              className="btn btn-secondary btn-sm"
               onClick={() => setActiveTab('report')}
             >
               <FileText size={14} />
@@ -338,16 +429,13 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
           <FileJson size={15} /> Evidence ({artifacts.length})
         </button>
         <button className={`tab-btn ${activeTab === 'correlations' ? 'active' : ''}`} onClick={() => setActiveTab('correlations')}>
-          <AlertTriangle size={15} /> Indicators ({correlations.length})
+          <ShieldAlert size={15} /> Correlation & IoC Engine ({correlations.length})
         </button>
         <button className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
           <Clock size={15} /> Timeline ({timeline.length})
         </button>
         <button className={`tab-btn ${activeTab === 'provenance' ? 'active' : ''}`} onClick={() => setActiveTab('provenance')}>
           <ShieldCheck size={15} /> Provenance ({provenance.length})
-        </button>
-        <button className={`tab-btn ${activeTab === 'ai-analyst' ? 'active' : ''}`} onClick={() => setActiveTab('ai-analyst')} style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>
-          <Sparkles size={15} /> AI Analyst
         </button>
         <button className={`tab-btn ${activeTab === 'report' ? 'active' : ''}`} onClick={() => setActiveTab('report')}>
           <FileText size={15} /> Final Report
@@ -429,7 +517,11 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
       )}
 
       {activeTab === 'correlations' && (
-        <CorrelationsView correlations={correlations} />
+        <CorrelationsView
+          correlations={correlations}
+          investigationId={investigationId}
+          onRefresh={() => loadAll(false)}
+        />
       )}
 
       {activeTab === 'timeline' && (
@@ -446,6 +538,108 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
 
       {activeTab === 'report' && (
         <ReportView investigationId={investigationId} isOngoing={isOngoing} />
+      )}
+
+      {/* AI Forensic Analyst Slide-Over Drawer */}
+      {showAiDrawer && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1200,
+          display: 'flex',
+          justifyContent: 'flex-end',
+          background: 'rgba(0, 0, 0, 0.55)',
+          backdropFilter: 'blur(5px)',
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          {/* Backdrop Click Dismiss */}
+          <div
+            onClick={() => setShowAiDrawer(false)}
+            style={{ flex: 1, cursor: 'pointer' }}
+          />
+
+          {/* Drawer Content */}
+          <div style={{
+            width: 'min(760px, 94vw)',
+            height: '100%',
+            background: 'var(--bg-main)',
+            borderLeft: '1px solid var(--border-subtle)',
+            boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.45)',
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            zIndex: 1201,
+            animation: 'slideInRight 0.25s ease'
+          }}>
+            {/* Drawer Header */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '18px 24px',
+              borderBottom: '1px solid var(--border-subtle)',
+              background: 'var(--bg-secondary)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.25))',
+                  border: '1px solid rgba(147, 51, 234, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Sparkles size={18} color="#a855f7" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                      AI Forensic Analyst Copilot
+                    </h3>
+                    <span className="badge badge-success" style={{ fontSize: 10 }}>
+                      Live Synthesis
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                    Automated MITRE ATT&CK Mapping • Root Cause Hypothesis • Behavioral Synthesis
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowAiDrawer(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 6,
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: 15,
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+                title="Close AI Analyst (Esc)"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Drawer Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+              <AiAnalystView investigationId={investigationId} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

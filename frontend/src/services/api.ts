@@ -117,6 +117,7 @@ export const api = {
   getInvestigationEvidence: (id: string) => request<EvidenceArtifact[]>(`/investigations/${id}/evidence`),
   getInvestigationProvenance: (id: string) => request<ProvenanceRecord[]>(`/investigations/${id}/provenance`),
   getInvestigationCorrelations: (id: string) => request<CorrelationMatch[]>(`/investigations/${id}/correlations`),
+  reEvaluateCorrelations: (id: string) => request<CorrelationMatch[]>(`/investigations/${id}/correlations/re-evaluate`, { method: "POST" }),
   getInvestigationTimeline: (id: string) => request<TimelineEvent[]>(`/investigations/${id}/timeline`),
   verifyEvidence: (id: string) =>
     request<{

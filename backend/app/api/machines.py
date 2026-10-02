@@ -446,7 +446,7 @@ def submit_command_result(machine_id: str, cmd_id: str, payload: CommandResultPa
         "command": str(cmd.command),
         "status": str(cmd.status),
         "exit_code": cmd.exit_code,
-        "signed_hash": str(cmd.signed_hash) if cmd.signed_hash else None
+        "signed_hash": cmd.signed_hash if cmd.signed_hash else None
     })
 
     return {"status": "recorded", "command_id": cmd.id, "signed_hash": cmd.signed_hash}

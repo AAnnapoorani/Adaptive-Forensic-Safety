@@ -305,6 +305,7 @@ export interface CorrelationMatch {
   rule_name: string;
   confidence: string;
   status_label: string;
+  severity?: string;
   description: string;
   matched_data?: string;
   created_at: string;
