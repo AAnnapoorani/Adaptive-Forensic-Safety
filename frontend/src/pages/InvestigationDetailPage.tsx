@@ -54,10 +54,10 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
   const [correlations, setCorrelations] = useState<CorrelationMatch[]>([]);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [planData, setPlanData] = useState<any>(null);
+  const [workflowSubView, setWorkflowSubView] = useState<'dag' | 'steps'>('dag');
 
   const VALID_TABS = [
     'overview',
-    'graph',
     'workflow',
     'evidence',
     'correlations',
@@ -72,6 +72,7 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
       const searchParams = new URLSearchParams(window.location.search);
       const tabParam = searchParams.get('tab')?.toLowerCase();
       if (!tabParam) return 'overview';
+      if (tabParam === 'graph' || tabParam === 'dag') return 'workflow';
       if (tabParam === 'artifacts') return 'evidence';
       if (tabParam === 'indicators') return 'correlations';
       if (tabParam === 'ai' || tabParam === 'aianalyst') return 'ai-analyst';
@@ -419,11 +420,8 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
         <button className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
           <Shield size={15} /> Overview
         </button>
-        <button className={`tab-btn ${activeTab === 'graph' ? 'active' : ''}`} onClick={() => setActiveTab('graph')}>
-          <GitBranch size={15} /> Evidence Graph
-        </button>
         <button className={`tab-btn ${activeTab === 'workflow' ? 'active' : ''}`} onClick={() => setActiveTab('workflow')}>
-          <ListOrdered size={15} /> Workflow Steps ({planData?.workflow_steps?.length || 0})
+          <ListOrdered size={15} /> Workflow Pipeline ({planData?.workflow_steps?.length || 0})
         </button>
         <button className={`tab-btn ${activeTab === 'evidence' ? 'active' : ''}`} onClick={() => setActiveTab('evidence')}>
           <FileJson size={15} /> Evidence ({artifacts.length})
@@ -500,12 +498,158 @@ export const InvestigationDetailPage: React.FC<InvestigationDetailPageProps> = (
         </div>
       )}
 
-      {activeTab === 'graph' && planData?.evidence_graph && (
-        <EvidenceGraphView graph={planData.evidence_graph} />
-      )}
 
       {activeTab === 'workflow' && (
-        <WorkflowStepsView steps={planData?.workflow_steps || []} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Dynamic Milestone Badge & Sub-view Switcher Toolbar */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+            padding: '14px 20px',
+            background: 'var(--bg-panel)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 10
+          }}>
+            {/* Dynamic Milestone Status Badge */}
+            <div>
+              {isOngoing ? (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 16px',
+                  borderRadius: 20,
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  color: 'var(--accent-blue, #38bdf8)',
+                  fontSize: 13,
+                  fontWeight: 600
+                }}>
+                  <Loader2 size={15} className="spin" />
+                  <span>Round {detail?.current_round || rounds.length || 1} Forensic Collection in Progress...</span>
+                </div>
+              ) : (detail?.metrics?.escalation_triggered || rounds.some(r => r.round_number > 1) || planData?.evidence_graph?.nodes?.some((n: any) => n.round_number > 1)) ? (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 18px',
+                  borderRadius: 20,
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)',
+                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  color: '#f59e0b',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: '0 2px 10px rgba(245, 158, 11, 0.1)'
+                }}>
+                  <Zap size={15} style={{ fill: '#f59e0b' }} />
+                  <span>⚡ Round 2 Deeper Drilldown Completed &mdash; <strong style={{ color: '#fbbf24' }}>{artifacts.length} Artifacts Verified</strong></span>
+                </div>
+              ) : detail?.status === 'COMPLETED' ? (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 18px',
+                  borderRadius: 20,
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#10b981',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  boxShadow: '0 2px 10px rgba(16, 185, 129, 0.1)'
+                }}>
+                  <CheckCircle2 size={15} />
+                  <span>✓ Round 1 Initial Triage Completed &mdash; <strong style={{ color: '#34d399' }}>{artifacts.length} Artifacts Verified</strong> (No Escalation Required)</span>
+                </div>
+              ) : (
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 16px',
+                  borderRadius: 20,
+                  background: 'var(--bg-item)',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-muted)',
+                  fontSize: 13,
+                  fontWeight: 600
+                }}>
+                  <span>Forensic Workflow Initialized &bull; {planData?.workflow_steps?.length || 0} Steps Planned</span>
+                </div>
+              )}
+            </div>
+
+            {/* Sub-view Switcher Toggle */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              background: 'var(--bg-secondary)',
+              padding: 3,
+              borderRadius: 6,
+              border: '1px solid var(--border-subtle)'
+            }}>
+              <button
+                onClick={() => setWorkflowSubView('dag')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  border: workflowSubView === 'dag' ? '1px solid var(--accent-blue)' : '1px solid transparent',
+                  background: workflowSubView === 'dag' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                  color: workflowSubView === 'dag' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <GitBranch size={13} />
+                Evidence DAG Pipeline
+              </button>
+              <button
+                onClick={() => setWorkflowSubView('steps')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  border: workflowSubView === 'steps' ? '1px solid var(--accent-blue)' : '1px solid transparent',
+                  background: workflowSubView === 'steps' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                  color: workflowSubView === 'steps' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <ListOrdered size={13} />
+                Steps Execution Ledger ({planData?.workflow_steps?.length || 0})
+              </button>
+            </div>
+          </div>
+
+          {/* Workflow Content: Either DAG Pipeline or Steps Ledger */}
+          {workflowSubView === 'dag' ? (
+            planData?.evidence_graph ? (
+              <EvidenceGraphView graph={planData.evidence_graph} />
+            ) : (
+              <div className="glass-panel" style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                <Loader2 size={24} className="spin" style={{ margin: '0 auto 12px' }} />
+                Loading Evidence Requirement Graph...
+              </div>
+            )
+          ) : (
+            <WorkflowStepsView steps={planData?.workflow_steps || []} />
+          )}
+        </div>
       )}
 
       {activeTab === 'evidence' && (

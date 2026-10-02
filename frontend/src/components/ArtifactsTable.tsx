@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { EvidenceArtifact } from '../types';
 import { api } from '../services/api';
-import { FileJson, CheckCircle, AlertTriangle, ShieldCheck, Eye, Copy, Check } from 'lucide-react';
+import { FileJson, CheckCircle, AlertTriangle, ShieldCheck, Eye, Copy, Check, Shield, Cpu, Network, Globe } from 'lucide-react';
 
 interface ArtifactsTableProps {
   artifacts: EvidenceArtifact[];
@@ -50,6 +50,57 @@ export const ArtifactsTable: React.FC<ArtifactsTableProps> = ({ artifacts, inves
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Low-Noise Living-off-the-Land (LotL) Collector Information Banner */}
+      <div style={{
+        padding: '14px 18px',
+        background: 'rgba(2, 132, 199, 0.06)',
+        border: '1px solid rgba(2, 132, 199, 0.25)',
+        borderRadius: 8,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            background: 'rgba(2, 132, 199, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--accent-blue)'
+          }}>
+            <Shield size={19} />
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>Low-Noise Living-off-the-Land (LotL) Collection Active</span>
+              <span className="badge badge-valid" style={{ fontSize: 10 }}>ZERO NOISE &bull; IN-MEMORY</span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+              Extracts process table (Toolhelp32), active network sockets (IP Helper API), and DNS resolver cache (DnsGetCacheDataTable) via read-only native OS APIs without tripping EDR/AV alerts.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: 'var(--text-dim)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Cpu size={13} color="var(--accent-blue)" /> Process Table
+          </span>
+          &bull;
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Network size={13} color="var(--accent-cyan)" /> Active Sockets
+          </span>
+          &bull;
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Globe size={13} color="var(--accent-emerald)" /> DNS Cache
+          </span>
+        </div>
+      </div>
+
       {/* Action Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -94,7 +145,8 @@ export const ArtifactsTable: React.FC<ArtifactsTableProps> = ({ artifacts, inves
           <thead>
             <tr>
               <th>Artifact ID</th>
-              <th>File Name</th>
+              <th>Artifact / File Name</th>
+              <th>Forensic Collector / Mechanism</th>
               <th>Operation</th>
               <th>Round</th>
               <th>Size</th>
@@ -107,22 +159,36 @@ export const ArtifactsTable: React.FC<ArtifactsTableProps> = ({ artifacts, inves
             {artifacts.map(a => (
               <tr key={a.id}>
                 <td>
-                  <span style={{ fontWeight: 600, color: 'var(--accent-blue)', fontFamily: 'monospace' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--accent-blue)', fontFamily: 'Fira Code, monospace', fontSize: 12 }}>
                     {a.id}
                   </span>
                 </td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <FileJson size={15} color="var(--accent-blue)" />
-                    {a.is_synthetic ? (
-                      <span className="badge badge-warning" style={{ fontSize: 9 }}>SYNTHETIC</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-main)', fontFamily: 'Fira Code, monospace', fontSize: 12 }}>
+                      {a.name}
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-main)' }}>
+                      {a.collector || a.operation}
+                    </span>
+                    {!a.is_synthetic ? (
+                      <span className="badge badge-valid" style={{ fontSize: 8.5, padding: '1px 5px' }}>
+                        LotL Native API
+                      </span>
                     ) : (
-                      <span className="badge badge-valid" style={{ fontSize: 9 }}>LIVE HOST</span>
+                      <span className="badge badge-warning" style={{ fontSize: 8.5, padding: '1px 5px' }}>
+                        SYNTHETIC
+                      </span>
                     )}
                   </div>
                 </td>
                 <td>
-                  <span className="badge badge-neutral">{a.operation}</span>
+                  <span className="badge badge-neutral" style={{ fontFamily: 'Fira Code, monospace', fontSize: 11 }}>{a.operation}</span>
                 </td>
                 <td>
                   <span className={`badge ${a.round_number > 1 ? 'badge-warning' : 'badge-in-progress'}`}>

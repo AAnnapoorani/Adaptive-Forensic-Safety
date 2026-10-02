@@ -1,4 +1,5 @@
 # pyrefly: ignore [missing-import]
+import json
 from fastapi import APIRouter, Depends, HTTPException
 # pyrefly: ignore [missing-import]
 from sqlalchemy.orm import Session
@@ -12,7 +13,9 @@ from app.schemas.investigation import CreateInvestigationRequest, PreviewScriptR
 from app.services.investigation_service import InvestigationService
 from app.jocky.lexer import LexerError
 from app.jocky.parser import ParserError, UnknownIntentError, EmptyDSLError
-from app.jocky.compiler import CompilationError
+from app.jocky.compiler import CompilationError, JockyCompiler
+from app.intelligence.evidence_graph import build_evidence_graph_for_intent
+from app.intelligence.intent_engine import IntentEngine
 from app.utils.datetime_utils import to_iso_utc
 
 router = APIRouter(prefix="/investigations", tags=["Investigations"])
@@ -151,7 +154,7 @@ def execute_investigation(investigation_id: str, demo: bool = False, db: Session
 
 @router.get("/{investigation_id}/plan")
 def get_investigation_plan(investigation_id: str, db: Session = Depends(get_db)):
-    """Get active plan and executed steps for an investigation."""
+    """Get active plan and executed steps for an investigation, with dynamically expanded multi-round DAG."""
     inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
@@ -160,18 +163,64 @@ def get_investigation_plan(investigation_id: str, db: Session = Depends(get_db))
         WorkflowStep.investigation_id == investigation_id
     ).order_by(WorkflowStep.round_id.asc(), WorkflowStep.priority.asc()).all()
 
-    # Also generate current graph
-    preview = InvestigationService.preview_investigation(db, investigation_id)
+    # Reconstruct live dynamic evidence graph representing initial and escalated rounds
+    intent_engine = IntentEngine()
+    initial_ops = intent_engine.resolve_initial_operations(inv.intent)
+
+    if inv.script and inv.script.strip():
+        try:
+            ast_root, ir = JockyCompiler.compile(inv.script)
+            manual_ops = [
+                ins.operation.replace("_", ".") for ins in ir.instructions
+                if ins.kind == "COLLECTION"
+            ]
+            for mop in manual_ops:
+                if mop not in initial_ops:
+                    initial_ops.append(mop)
+        except Exception:
+            pass
+
+    graph = build_evidence_graph_for_intent(inv.intent, initial_ops)
+
+    # Check for executed escalations and dynamically expand graph
+    escalations = db.query(EscalationAction).filter(
+        EscalationAction.investigation_id == investigation_id
+    ).order_by(EscalationAction.created_at.asc()).all()
+
+    for esc in escalations:
+        try:
+            new_ops = json.loads(str(esc.new_operations))
+            if isinstance(new_ops, list):
+                r_num = 2
+                if esc.round_obj and esc.round_obj.round_number:
+                    r_num = esc.round_obj.round_number + 1
+                graph.expand_with_operations(new_ops, str(esc.trigger_rule), round_number=r_num)
+        except Exception:
+            pass
+
+    # Update node statuses based on actual executed workflow steps
+    for s in steps:
+        node = graph.get_node_by_operation(s.operation)
+        if node:
+            if s.status == "COMPLETED":
+                node.status = "COLLECTED"
+            elif s.status == "FAILED":
+                node.status = "FAILED"
+            elif s.status == "RUNNING":
+                node.status = "COLLECTING"
+            else:
+                node.status = "PLANNED"
 
     return {
         "investigation_id": inv.id,
         "intent": inv.intent,
-        "evidence_graph": preview["evidence_graph"],
+        "evidence_graph": graph.to_dict(),
         "workflow_steps": [
             {
                 "id": s.id,
                 "operation": s.operation,
                 "priority": s.priority,
+                "round_number": s.round_obj.round_number if s.round_obj else 1,
                 "status": s.status,
                 "start_time": to_iso_utc(s.start_time),
                 "end_time": to_iso_utc(s.end_time),
