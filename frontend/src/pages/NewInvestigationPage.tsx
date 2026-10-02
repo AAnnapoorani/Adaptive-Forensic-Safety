@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import type { Machine, PlanPreview } from '../types';
 import { EvidenceGraphView } from '../components/EvidenceGraphView';
-import { Play, Eye, Code, Server, Sparkles, AlertCircle } from 'lucide-react';
+import { Play, Eye, Code, Server, Sparkles, AlertCircle, Network } from 'lucide-react';
 
 interface NewInvestigationPageProps {
   onInvestigationStarted: (id: string) => void;
@@ -416,15 +416,15 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
           </div>
 
           {/* Split-Screen: Left: Compiler Intermediate Representation (IR) JSON, Right: Evidence Requirement DAG */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(400px, 1.3fr)', gap: 20, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) minmax(400px, 1.4fr)', gap: 20, marginBottom: 24, alignItems: 'start' }}>
             {/* Left: Compiler IR JSON Structure */}
-            <div className="glass-panel" style={{ padding: 18, display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, minHeight: 28 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Code size={16} color="var(--accent-blue)" />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)' }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                     Compiler Intermediate Representation (IR)
-                  </span>
+                  </h3>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <span className="badge badge-completed" style={{ fontSize: 10 }}>COMPILED_OK</span>
@@ -435,41 +435,47 @@ export const NewInvestigationPage: React.FC<NewInvestigationPageProps> = ({
                   )}
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-                Syntactic structure produced by Lexer & Parser prior to endpoint execution:
+
+              <div className="glass-panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                  Syntactic structure produced by Lexer & Parser prior to endpoint execution:
+                </div>
+                <pre style={{
+                  flex: 1,
+                  maxHeight: 460,
+                  overflowY: 'auto',
+                  padding: 14,
+                  borderRadius: 8,
+                  background: 'var(--bg-code)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: 12,
+                  fontFamily: 'Fira Code, monospace',
+                  color: 'var(--text-code)',
+                  lineHeight: 1.4,
+                  margin: 0
+                }}>
+                  {JSON.stringify(previewPlan.ir || {
+                    intent: previewPlan.intent,
+                    round_limit: 3,
+                    options: { stealth_mode: true, evidence_level: "comprehensive" },
+                    instructions: previewPlan.workflow.steps.map(s => ({ kind: "COLLECTION", operation: s.operation }))
+                  }, null, 2)}
+                </pre>
               </div>
-              <pre style={{
-                flex: 1,
-                maxHeight: 460,
-                overflowY: 'auto',
-                padding: 14,
-                borderRadius: 8,
-                background: 'var(--bg-code)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 12,
-                fontFamily: 'Fira Code, monospace',
-                color: 'var(--text-code)',
-                lineHeight: 1.4,
-                margin: 0
-              }}>
-                {JSON.stringify(previewPlan.ir || {
-                  intent: previewPlan.intent,
-                  round_limit: 3,
-                  options: { stealth_mode: true, evidence_level: "comprehensive" },
-                  instructions: previewPlan.workflow.steps.map(s => ({ kind: "COLLECTION", operation: s.operation }))
-                }, null, 2)}
-              </pre>
             </div>
 
             {/* Right: Evidence Requirement Graph (DAG) */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span>Evidence Requirement Graph (DAG)</span>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, minHeight: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Network size={16} color="var(--accent-blue)" />
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                    Evidence Requirement Graph (DAG)
+                  </h3>
                   <span className="badge badge-in-progress" style={{ fontSize: 10 }}>
                     {previewPlan.evidence_graph.nodes.length} Nodes &bull; {previewPlan.evidence_graph.edges.length} Edges
                   </span>
-                </h3>
+                </div>
                 <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Mathematically Resolved Dependency Flow</span>
               </div>
               <EvidenceGraphView graph={previewPlan.evidence_graph} />
